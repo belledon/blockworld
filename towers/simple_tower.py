@@ -2,7 +2,7 @@ import numpy as np
 import networkx as nx
 from towers.tower import Tower
 
-class SomeTower(Tower):
+class SimpleTower(Tower):
 
     """
     Non-Empty instance of a `Tower`.
@@ -45,6 +45,24 @@ class SomeTower(Tower):
 
         self._blocks = blocks
 
+    @property
+    def height(self):
+
+        g = self.blocks
+        tops = [b for b in g if len(g.successors(b)) == 0]
+        result = 0
+        for top in tops:
+            block = g[top]
+            position = block['position']
+            orientation = block['orientation']
+            surface = block['block'].surface(orientation)
+            # adjust the object-relative plane by its position in the tower
+            adjusted = (surface + position)[0,2]
+            result = max(adjusted, result)
+
+        # used to adjust the total height
+        base_height = g['base']['block'].dimensions[2]
+        return result - base_height
 
     # Methods #
 
@@ -56,13 +74,8 @@ class SomeTower(Tower):
         Returns surface maps valid for block placement.
         """
         g = self.blocks
-
-        # find the top-most blocks
-        tops = [block for block in g if len(g.succesors(b) == 0)]
-
         # get the top surface of each block
-        blocks = g.successors('base')
-        for b_id in blocks:
+        for b_id in g:
             block = g[b_id]
             position = block['position']
             orientation = block['orientation']
@@ -80,19 +93,25 @@ class SomeTower(Tower):
         """
         Returns a new tower with the given blocked added.
         """
-        g = self.base
-        g.add_node(1, block = block)
-        g.add_edge('base', 1)
-        new_tower = towers.SomeTower(g)
+        g = self.blocks
+        b_id = len(g) - 1
+        g.add_node(b_id, block = block, position = position,
+                   orientation = orientation)
+        g.add_edge(parent, 1)
+        new_tower = SimpleTower(g)
         return new_tower
 
 
     def is_stable(self):
         """
-        An empty tower is always considered stable.
+        Returns `True` for now.
+        Not sure if method will remain.
         """
         return True
 
     def serialize(self):
         g = self.blocks
-        return {b : b['block'].serialize for b in g}
+        d = dict(id='id', children='children', block = 'block',
+                 position='position',  orienatation='orienatation')
+
+        return nx.tree_data(g, attrs=d)

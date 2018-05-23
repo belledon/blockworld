@@ -18,22 +18,38 @@ class SimpleBuilder(Builder):
 
     """
 
+    def __init__(self, max_blocks, max_height):
+        self.max_blocks = max_blocks
+        self.max_height = max_height
+
+
     # Properties #
 
     @property
-    @abstractmethod
     def max_blocks(self):
-        pass
+        return self._max_blocks
+
+    @max_blocks.setter
+    def max_blocks(self, v):
+        v = int(v)
+        if v <= 0 :
+            msg = '`max_blocks` must be greater than 0'
+            raise ValueError(msg)
+        self._max_blocks = v
 
     @property
-    @abstractmethod
     def max_height(self):
-        pass
+        return self._max_height
+
+    @max_height.setter
+    def max_height(self, v):
+        v = int(v)
+        if v <= 0 :
+            msg = '`max_height` must be greater than 0'
+            raise ValueError(msg)
+        self._max_height = v
 
     # Methods #
-
-    def is_stable(self, tower_block, new_block):
-
 
     def find_placement(self, tower_surface, block_surface):
         """
@@ -46,19 +62,23 @@ class SimpleBuilder(Builder):
         dx,dy = (block_surface / 2.0)
         exclude = []
         positions = []
-        for ranked_plane in tower_surface:
+        parents = []
+        for parent, plane in tower_surface:
             # only consider x-y plane
-            points = ranked_plane[:, :2]
-            z = ranked_plane[0, 2]
+            points = plane[:, :2]
+            z = plane[0, 2]
 
             # removed points already used by higher planes
             filtered = np.array([p for p in points
                         if not any(np.isclose(point, exluded))])
+            # store good points and associated parent ids
             passed = np.empty((len(filtered), 3))
             passed[:,:2] = filtered
-            passed[:,2] = z
+            passed[:,2] = np.repeat(z, len(filtered))
             positions = np.hstack(positions, passed)
+            parents.append(np.repeat(parent, len(filtered)))
 
+            # exlcude borders for following surfaces
             cv_hull = ConvexHull(filtered)
             center = np.mean(cv_hull, axis = 1)
 
@@ -68,43 +88,41 @@ class SimpleBuilder(Builder):
                                            np.sin(rots.T[1]) * dy]).T
             exclude = np.hstack(exclude, expanded)
 
-        return positions
+        parents = np.array(parents).flatten()
+        return zip(parents, positions)
 
-    def valid_placements(self, tower, block):
+    def valid_placements(self, tower, block, rotations):
         """
         Finds suitable placements for a block on a tower.
         """
-        block_surfaces = block.surfaces() # TODO : add iterable over quaternions
-        tower_surface = tower.available_surface()
+        block_surfaces = [block.surface(r, False) for r in rotations]
+        # list of (parent, surface) tuples
+        tower_surfaces = tower.available_surface()
 
         valid = []
-        for i, block_surface in enumerate(block_surfaces):
-            positions = self.evaluate_placement(tower_surface, block_surface)
-            results = [(pos, i) for pos in positions]
+        for rot, block_surface in zip(rotations, block_surfaces):
+            positions = self.evaluate_placement(tower_surfaces, block_surface)
+            results = [(pos, rot) for pos in positions]
             valid.append(results)
 
         return valid
 
-    @abstractmethod
-    def __call__(self, base_tower, block=None):
+    def __call__(self, base_tower, block, rotations):
         """
         Builds a tower ontop of the given base.
 
         Follows the constrains given in `max_blocks` and `max_height`.
         """
 
-        if block is None:
-            block = blocks.SimpleBlock()
-
         t_tower = copy.deepcopy(base_tower)
 
         for ib in range(self.max_blocks):
 
             if t_tower.height >= self.max_height:
-                return t_tower
+                break
 
-            valids = self.valid_placements(t_tower, block)
-            pos, rot = np.random.choice(valids)
-            t_tower = t_tower.place_block(block, pos, rot)
+            valids = self.valid_placements(t_tower, block, rotations)
+            parent, pos, rot = np.random.choice(valids)
+            t_tower = t_tower.place_block(block, parent, pos, rot)
 
         return t_tower

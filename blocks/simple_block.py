@@ -1,3 +1,4 @@
+import numpy as np
 from pyquaternion import Quaternion
 
 from blocks.block import Block
@@ -62,14 +63,14 @@ class SimpleBlock(Block):
 
     # Methods #
 
-    def surface(self, top = True):
+    def surface(self, orientation = Quaternion(), top = True):
         """
         Returns the surface plane.
 
         Defaults to the top surface along the z-axis.
         """
         mat = self.mat
-        rotated = self.orientation.rotate(mat)
+        rotated = orientation.rotate(mat)
 
         # find the top surface
         order = np.argsort(rotated[:, 2])

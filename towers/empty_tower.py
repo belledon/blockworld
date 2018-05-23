@@ -1,8 +1,8 @@
 import numpy as np
 import networkx as nx
-from towers.tower import Tower
+from towers.simple_tower import SimpleTower
 
-class EmptyTower(Tower):
+class EmptyTower(SimpleTower):
 
     """
     Empty instance of a `Tower`.
@@ -19,10 +19,6 @@ class EmptyTower(Tower):
 
     # Properties #
 
-    @property
-    def base_dimensions(self):
-        return self.blocks['base']['dims']
-
     @base_dimensions.setter
     def base_dimensions(self, ds):
 
@@ -32,18 +28,15 @@ class EmptyTower(Tower):
 
         ds = np.array(ds)
         g = nx.DiGraph()
-        g.add_node('base', block = blocks.BaseBlock(ds))
+        g.add_node('base', block = blocks.BaseBlock(ds), position = [0, 0, 0],
+                   orientation = Quaternion())
         self._blocks = g
 
-
     @property
-    def blocks(self):
-        return self._blocks
+    def height(self):
+        return 0
 
     # Methods #
-
-    def __len__(self):
-        return 0
 
     def available_surface(self):
         """
@@ -52,16 +45,16 @@ class EmptyTower(Tower):
         Empty towers return their base as a flat surface.
         """
         surface = self.blocks['base']['blocks'].surface()
-        return [surface]
+        return [('base', surface)]
 
     def place_block(self, block, parent, position, orientation):
         """
         Returns a new tower with the given blocked added.
         """
-        g = self.base
+        g = self.blocks
         g.add_node(1, block = block, position, orientation)
         g.add_edge('base', 1)
-        new_tower = towers.SomeTower(g)
+        new_tower = SimpleTower(g)
         return new_tower
 
 
@@ -70,6 +63,3 @@ class EmptyTower(Tower):
         An empty tower is always considered stable.
         """
         return True
-
-    def serialize(self):
-        return {'base' : self.blocks['base']['block'].serialize()}

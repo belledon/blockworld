@@ -1,4 +1,3 @@
-import networkx as nx
 from abstract import ABC
 
 class Tower(ABC):
@@ -36,10 +35,10 @@ class Tower(ABC):
     def blocks(self):
         pass
 
-    # @property
-    # @abstractmethod
-    # def height(self):
-    #     pass
+    @property
+    @abstractmethod
+    def height(self):
+        pass
 
 
     # Methods #
@@ -58,12 +57,12 @@ class Tower(ABC):
         """
         pass
 
-    @abstractmethod
-    def is_stable(self):
-        """
-        Evaluates the stability of the tower (if collapses).
-        """
-        pass
+    # @abstractmethod
+    # def is_stable(self):
+    #     """
+    #     Evaluates the stability of the tower (if collapses).
+    #     """
+    #     pass
 
     @abstractmethod
     def serialize(self):
