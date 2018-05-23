@@ -59,12 +59,11 @@ class SimpleBuilder(Builder):
             passed[:,2] = z
             positions = np.hstack(positions, passed)
 
-            # find 
             cv_hull = ConvexHull(filtered)
             center = np.mean(cv_hull, axis = 1)
 
             rots = cv_hull - center
-            rots = rots / np.linalg.norm(rots)
+            rots = np.arctan(rots / np.linalg.norm(rots))
             expanded = cv_hull + np.vstack([np.cos(rots.T[0]) * dx,
                                            np.sin(rots.T[1]) * dy]).T
             exclude = np.hstack(exclude, expanded)
