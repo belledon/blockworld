@@ -27,30 +27,36 @@ class Tower(ABC):
     # Properties #
 
     @property
+    @abstractmethod
     def base_dimensions(self):
-        return self._base_dimensions
-
-    @base_dimensions.setter
-    def base_dimensions(self, ds):
-
-        if len(ds) != 3:
-            msg = 'Dimensions of length {0:d} not accepted'.format(len(ds))
-            raise ValueError(msg)
-
-        self._base_dimensions = np.array(ds)
+        pass
 
     @property
     @abstractmethod
     def blocks(self):
         pass
 
-    @property
-    @abstractmethod
-    def height(self):
-        pass
+    # @property
+    # @abstractmethod
+    # def height(self):
+    #     pass
 
 
     # Methods #
+
+    @abstractmethod
+    def available_surface(self):
+        """
+        Returns surface maps valid for block placement.
+        """
+        pass
+
+    @abstractmethod
+    def place_block(self):
+        """
+        Returns a new tower with the given blocked added.
+        """
+        pass
 
     @abstractmethod
     def is_stable(self):

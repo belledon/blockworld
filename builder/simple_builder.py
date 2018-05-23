@@ -74,15 +74,13 @@ class SimpleBuilder(Builder):
         """
         Finds suitable placements for a block on a tower.
         """
-        block_surfaces = block.surfaces()
+        block_surfaces = block.surfaces() # TODO : add iterable over quaternions
         tower_surface = tower.available_surface()
 
         valid = []
-        for block_surface in block_surfaces:
-            area = block_surface['area']
-            positions = self.evaluate_placement(tower_surface, area)
-            rot = block_surface['orientation']
-            results = [(pos, rot) for pos in positions]
+        for i, block_surface in enumerate(block_surfaces):
+            positions = self.evaluate_placement(tower_surface, block_surface)
+            results = [(pos, i) for pos in positions]
             valid.append(results)
 
         return valid

@@ -30,6 +30,13 @@ class Block(ABC):
     # Methods #
 
     @abstractmethod
+    def surfaces(self):
+        """
+        Returns each surface as a plane.
+        """
+        pass
+
+    @abstractmethod
     def serialize(self):
         """
         Serializes the attributes of the block to `dict`.
