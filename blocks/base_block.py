@@ -25,11 +25,11 @@ class BaseBlock(SimpleBlock):
         return self._dims
 
     @dimensions.setter
-    def dimensions(self, ds)
+    def dimensions(self, ds):
         if len(ds) != 2:
             msg = 'Dimensions must have length 2'
             raise ValueError(msg)
         t = np.ones(3)
         t[:2] = np.array(ds)
         self._dims = t
-        self._mat = t
+        self.mat = t

@@ -1,6 +1,10 @@
+import copy
+import pprint
 import numpy as np
-import scipy.spatial
+from scipy.spatial import ConvexHull
+from shapely import geometry
 
+from utils import math_2d
 from builders.builder import Builder
 
 
@@ -51,7 +55,7 @@ class SimpleBuilder(Builder):
 
     # Methods #
 
-    def find_placement(self, tower_surface, block_surface):
+    def find_placement(self, tower_surface, block_dims):
         """
         Enumerates the geometrically valid positions for
         a block surface on a tower surface.
@@ -59,8 +63,8 @@ class SimpleBuilder(Builder):
         The tower surfaces are expected to be sorted along the
         z-axis.
         """
-        dx,dy = (block_surface / 2.0)
-        exclude = []
+        dx,dy,_ = block_dims / 2.0
+        exclude = geometry.Polygon()
         positions = []
         parents = []
         for parent, plane in tower_surface:
@@ -68,25 +72,35 @@ class SimpleBuilder(Builder):
             points = plane[:, :2]
             z = plane[0, 2]
 
+            points = geometry.MultiPoint(points)
             # removed points already used by higher planes
-            filtered = np.array([p for p in points
-                        if not any(np.isclose(point, exluded))])
+            filtered = points.difference(exclude)
+            # print(filtered)
             # store good points and associated parent ids
             passed = np.empty((len(filtered), 3))
-            passed[:,:2] = filtered
-            passed[:,2] = np.repeat(z, len(filtered))
-            positions = np.hstack(positions, passed)
-            parents.append(np.repeat(parent, len(filtered)))
+            passed[:,:2] = np.vstack([p.coords for p in filtered])
+            passed[:,2] = z
+
+            positions += passed.tolist()
+            parents += np.repeat(parent, len(filtered)).tolist()
 
             # exlcude borders for following surfaces
-            cv_hull = ConvexHull(filtered)
-            center = np.mean(cv_hull, axis = 1)
-
-            rots = cv_hull - center
-            rots = np.arctan(rots / np.linalg.norm(rots))
-            expanded = cv_hull + np.vstack([np.cos(rots.T[0]) * dx,
-                                           np.sin(rots.T[1]) * dy]).T
-            exclude = np.hstack(exclude, expanded)
+            # cv_hull = np.array(math_2d.convex_hull(filtered))
+            # cv_hull = filtered[ConvexHull(filtered).vertices]
+            cv_hull = geometry.MultiPoint(filtered).convex_hull
+            cv_hull_x = cv_hull.buffer(dx)
+            cv_hull_y = cv_hull.buffer(dy)
+            cv_hull_sd = cv_hull_x.symmetric_difference(cv_hull_y)
+            cv_hull_complete = cv_hull.union(cv_hull_sd)
+            # print(filtered)
+            # print(cv_hull)
+            # center = np.mean(cv_hull, axis = 1)
+            # raise ValueError()
+            # rots = cv_hull - center
+            # rots = np.arctan(rots / np.linalg.norm(rots))
+            # expanded = cv_hull + np.vstack([np.cos(rots.T[0]) * dx,
+            #                                np.sin(rots.T[1]) * dy]).T
+            exclude = exclude.union(cv_hull)
 
         parents = np.array(parents).flatten()
         return zip(parents, positions)
@@ -95,15 +109,16 @@ class SimpleBuilder(Builder):
         """
         Finds suitable placements for a block on a tower.
         """
-        block_surfaces = [block.surface(r, False) for r in rotations]
         # list of (parent, surface) tuples
         tower_surfaces = tower.available_surface()
 
         valid = []
-        for rot, block_surface in zip(rotations, block_surfaces):
-            positions = self.evaluate_placement(tower_surfaces, block_surface)
-            results = [(pos, rot) for pos in positions]
-            valid.append(results)
+        for rot in rotations:
+            surface = block.surface(rot, False)
+            block_dims = np.max(surface, axis = 0) - np.min(surface, axis = 0)
+            positions = self.find_placement(tower_surfaces, block_dims)
+            results = [(parent, pos, rot) for parent, pos in positions]
+            valid += results
 
         return valid
 
@@ -117,12 +132,13 @@ class SimpleBuilder(Builder):
         t_tower = copy.deepcopy(base_tower)
 
         for ib in range(self.max_blocks):
-
+            print('height', t_tower.height)
+            print('blocks', len(t_tower), ib)
             if t_tower.height >= self.max_height:
                 break
 
             valids = self.valid_placements(t_tower, block, rotations)
-            parent, pos, rot = np.random.choice(valids)
+            parent, pos, rot = valids[np.random.choice(len(valids))]
             t_tower = t_tower.place_block(block, parent, pos, rot)
 
         return t_tower

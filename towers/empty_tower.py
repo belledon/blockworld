@@ -1,6 +1,9 @@
 import numpy as np
 import networkx as nx
+from pyquaternion import Quaternion
+
 from towers.simple_tower import SimpleTower
+from blocks.base_block import BaseBlock
 
 class EmptyTower(SimpleTower):
 
@@ -19,6 +22,10 @@ class EmptyTower(SimpleTower):
 
     # Properties #
 
+    @property
+    def base_dimensions(self):
+        return self.blocks['base']['dims']
+
     @base_dimensions.setter
     def base_dimensions(self, ds):
 
@@ -28,7 +35,8 @@ class EmptyTower(SimpleTower):
 
         ds = np.array(ds)
         g = nx.DiGraph()
-        g.add_node('base', block = blocks.BaseBlock(ds), position = [0, 0, 0],
+        base = BaseBlock(ds)
+        g.add_node('base', block = base, position = [0, 0, 0.5],
                    orientation = Quaternion())
         self._blocks = g
 
@@ -38,24 +46,15 @@ class EmptyTower(SimpleTower):
 
     # Methods #
 
-    def available_surface(self):
-        """
-        Returns surface maps valid for block placement.
+    # def available_surface(self):
+    #     """
+    #     Returns surface maps valid for block placement.
 
-        Empty towers return their base as a flat surface.
-        """
-        surface = self.blocks['base']['blocks'].surface()
-        return [('base', surface)]
-
-    def place_block(self, block, parent, position, orientation):
-        """
-        Returns a new tower with the given blocked added.
-        """
-        g = self.blocks
-        g.add_node(1, block = block, position, orientation)
-        g.add_edge('base', 1)
-        new_tower = SimpleTower(g)
-        return new_tower
+    #     Empty towers return their base as a flat surface.
+    #     """
+    #     g = self.blocks
+    #     surface = g.nodes['base']['block'].surface()
+    #     return [('base', surface)]
 
 
     def is_stable(self):

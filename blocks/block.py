@@ -1,4 +1,4 @@
-from abstract import ABC
+from abc import ABC, abstractmethod
 
 
 class Block(ABC):
@@ -27,12 +27,17 @@ class Block(ABC):
     def orientation(self):
         pass
 
+    @property
+    @abstractmethod
+    def mat(self):
+        pass
+
     # Methods #
 
     @abstractmethod
-    def surfaces(self):
+    def surface(self):
         """
-        Returns each surface as a plane.
+        Returns the surface plane of either the top or bottom face.
         """
         pass
 
