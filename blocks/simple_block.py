@@ -63,39 +63,43 @@ class SimpleBlock(Block):
 
     # Methods #
 
-    def surface(self, orientation = Quaternion(), top = True, step=1.00):
+    def surface(self, orientation = Quaternion(), top = True, step=0.10):
         """
         Returns the surface plane.
 
         Defaults to the top surface along the z-axis.
         """
+        # orient matrix
         mat = self.mat
         rotated = np.array([orientation.rotate(m) for m in mat])
 
         # find the top surface
         order = np.argsort(rotated[:, 2])
         corners = rotated[order[-4:]]
-        # correct z axis
-        delta = np.array([0, 0, abs(corners[0,2])])
-        if not top:
-            delta = delta * -1.0
 
-        corners = corners + delta
-        t = corners[np.argsort(corners[:, 1]), :2]
-        t = t[np.argsort(t[:, 0])]
-        xs = np.arange(t[0,0], t[2,0] + step, step)
-        ys = np.arange(t[0,1], t[1,1] + step, step)
-        zs = np.repeat(corners[0,2], len(xs) * len(ys))
-        surface_t = np.array(np.meshgrid(xs, ys)).T.reshape(-1, 2)
-        surface = np.hstack((surface_t, np.expand_dims(zs, axis=1)))
-        return surface
+        return corners
+
+        # # create grid
+        # t = corners[np.argsort(corners[:, 1]), :2]
+        # t = t[np.argsort(t[:, 0])]
+
+
+        # xs = np.arange(t[0,0], t[2,0] + step, step)
+        # ys = np.arange(t[0,1], t[1,1] + step, step)
+        # zs = np.repeat(corners[0,2], len(xs) * len(ys))
+        # if not top:
+        #     zs = -1 * zs
+        # surface_t = np.array(np.meshgrid(xs, ys)).T.reshape(-1, 2)
+        # surface = np.hstack((surface_t, np.expand_dims(zs, axis=1)))
+        # return surface
 
     def serialize(self):
         """
         Serializes the attributes of the block to `dict`.
         """
-        d = {'dims' : self.dimensions.tolist()}
+        d = dict(dims = self.dimensions.tolist())
         return d
 
     def __repr__(self):
-        return self.serialize().__repr__()
+        return repr(self.serialize())
+

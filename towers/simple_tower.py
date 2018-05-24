@@ -1,7 +1,10 @@
 import copy
+import json
 import numpy as np
 import networkx as nx
+
 from towers.tower import Tower
+from utils.json_encoders import TowerEncoder
 
 class SimpleTower(Tower):
 
@@ -94,7 +97,7 @@ class SimpleTower(Tower):
             surfaces = np.array(surfaces)[order]
             block_ids = np.array(block_ids)[order]
 
-        return zip(block_ids, surfaces)
+        return list(zip(block_ids, surfaces))
 
     def place_block(self, block, parent, position, orientation):
         """
@@ -102,6 +105,10 @@ class SimpleTower(Tower):
         """
         g = self.blocks
         b_id = '{0:d}'.format(len(g))
+        # adjust z axis by center of the object
+        surface = block.surface(orientation)
+        dz = surface[0,2]
+        position = np.add(position, [0, 0, dz])
         g.add_node(b_id, block = block, position = position,
                    orientation = orientation)
         g.add_edge(parent, b_id)
@@ -120,5 +127,8 @@ class SimpleTower(Tower):
         g = self.blocks
         d = dict(id='id', children='children', block = 'block',
                  position='position',  orienatation='orienatation')
-        # return nx.tree_data(g, 'base', attrs=d)
-        return nx.jit_data(g)
+        return nx.tree_data(g, 'base', attrs=d)
+        # return nx.jit_data(g)
+
+    def __repr__(self):
+        return json.dumps(self.serialize(), cls = TowerEncoder)

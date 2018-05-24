@@ -2,10 +2,30 @@ import copy
 import pprint
 import numpy as np
 from scipy.spatial import ConvexHull
-from shapely import geometry
+from shapely import geometry, affinity
+from shapely.prepared import prep
 
 from utils import math_2d
 from builders.builder import Builder
+
+# import matplotlib as mpl
+# mpl.use('Agg')
+from matplotlib.collections import PatchCollection
+from matplotlib.patches import Circle, Wedge, Polygon
+import matplotlib.pyplot as plt
+
+
+def plot_coords(ax, ob):
+    # x, y = ob.xy
+    print(np.array(list(ob.coords)).shape)
+    # xy = np.array(list(ob.xy))
+    pgon = Polygon(np.array(list(ob.coords)))
+    p = PatchCollection([pgon], alpha=0.4)
+    colors = 100*np.random.rand(1)
+    p.set_array(np.array(colors))
+    ax.add_collection(p)
+    # ax.plot(x, y, 'o', color='#999999', zorder=1)
+
 
 
 class SimpleBuilder(Builder):
@@ -55,6 +75,13 @@ class SimpleBuilder(Builder):
 
     # Methods #
 
+    def make_grid(self, bbox, step = 0.25):
+        xs = np.arange(bbox[0], bbox[2] + step, step)
+        ys = np.arange(bbox[1], bbox[3] + step, step)
+        grid = np.array(np.meshgrid(xs, ys)).T.reshape(-1, 2)
+        return geometry.MultiPoint(grid)
+
+
     def find_placement(self, tower_surface, block_dims):
         """
         Enumerates the geometrically valid positions for
@@ -63,44 +90,71 @@ class SimpleBuilder(Builder):
         The tower surfaces are expected to be sorted along the
         z-axis.
         """
-        dx,dy,_ = block_dims / 2.0
+        print('FINDING PLACEMENT')
+        dx,dy,_ = block_dims
         exclude = geometry.Polygon()
         positions = []
         parents = []
-        for parent, plane in tower_surface:
-            # only consider x-y plane
-            points = plane[:, :2]
-            z = plane[0, 2]
+        bounds = [np.hstack((np.min(cs[:,:2],axis=0), np.max(cs[:,:2],axis=0)))
+                            for _,cs in tower_surface]
+        planes = [geometry.box(*bs) for bs in bounds]
 
-            points = geometry.MultiPoint(points)
+
+        for row, (parent, corners) in enumerate(tower_surface):
+            # only consider x-y plane
+            print('on parent', parent)
+            bbox = bounds[row]
+            z = corners[0, 2]
+
+            grid = self.make_grid(bbox)
+            plane = planes[row]
+            print('starting grid', len(grid))
+            # skim off any points near the edge
+            safe_plane = affinity.scale(plane, 0.9, 0.9)
+
+            grid = geometry.MultiPoint(
+                list(filter(safe_plane.contains, grid)))
+            print('after safe trimming', len(grid))
+            # only consider points that are stable
+            for lower_plane in planes[row+1:]:
+                if len(grid) < 1:
+                    continue
+                print('lower_plane', lower_plane.bounds)
+                grid = geometry.MultiPoint(
+                    list(filter(lower_plane.contains, grid)))
+
+            print('after stability', len(grid))
+            if len(grid) < 1:
+                continue
+
             # removed points already used by higher planes
-            filtered = points.difference(exclude)
-            # print(filtered)
+            for higher_plane in planes[:row]:
+                if len(grid) < 1:
+                    continue
+                p_bounds = higher_plane.bounds
+                # print(list(cv_hull.exterior.coords))
+                ddx = 1 + dx / (p_bounds[2] - p_bounds[0])
+                ddy = 1 + dy / (p_bounds[3] - p_bounds[1])
+                hp_scaled = affinity.scale(higher_plane, ddx, ddy)
+                to_exclude = geometry.MultiPoint(
+                    list(filter(hp_scaled.contains, grid)))
+                grid = grid.difference(to_exclude)
+                print('to exclude', len(to_exclude))
+                print(to_exclude)
+                print('after exclusion', len(grid))
+            if len(grid) < 1:
+                continue
+
             # store good points and associated parent ids
-            passed = np.empty((len(filtered), 3))
-            passed[:,:2] = np.vstack([p.coords for p in filtered])
+            passed = np.empty((len(grid), 3))
+            passed[:,:2] = np.vstack([p.coords for p in grid])
             passed[:,2] = z
 
             positions += passed.tolist()
-            parents += np.repeat(parent, len(filtered)).tolist()
+            parents += np.repeat(parent, len(grid)).tolist()
 
-            # exlcude borders for following surfaces
-            # cv_hull = np.array(math_2d.convex_hull(filtered))
-            # cv_hull = filtered[ConvexHull(filtered).vertices]
-            cv_hull = geometry.MultiPoint(filtered).convex_hull
-            cv_hull_x = cv_hull.buffer(dx)
-            cv_hull_y = cv_hull.buffer(dy)
-            cv_hull_sd = cv_hull_x.symmetric_difference(cv_hull_y)
-            cv_hull_complete = cv_hull.union(cv_hull_sd)
-            # print(filtered)
-            # print(cv_hull)
-            # center = np.mean(cv_hull, axis = 1)
-            # raise ValueError()
-            # rots = cv_hull - center
-            # rots = np.arctan(rots / np.linalg.norm(rots))
-            # expanded = cv_hull + np.vstack([np.cos(rots.T[0]) * dx,
-            #                                np.sin(rots.T[1]) * dy]).T
-            exclude = exclude.union(cv_hull)
+            # exclude borders for following surfaces
+            # cv_hull = geometry.MultiPoint(filtered).convex_hull
 
         parents = np.array(parents).flatten()
         return zip(parents, positions)
@@ -120,6 +174,7 @@ class SimpleBuilder(Builder):
             results = [(parent, pos, rot) for parent, pos in positions]
             valid += results
 
+        print('randomly generated ', len(valid))
         return valid
 
     def __call__(self, base_tower, block, rotations):
