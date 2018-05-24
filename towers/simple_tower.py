@@ -120,4 +120,5 @@ class SimpleTower(Tower):
         g = self.blocks
         d = dict(id='id', children='children', block = 'block',
                  position='position',  orienatation='orienatation')
-        return nx.tree_data(g, 'base', attrs=d)
+        # return nx.tree_data(g, 'base', attrs=d)
+        return nx.jit_data(g)

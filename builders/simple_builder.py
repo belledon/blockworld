@@ -132,8 +132,6 @@ class SimpleBuilder(Builder):
         t_tower = copy.deepcopy(base_tower)
 
         for ib in range(self.max_blocks):
-            print('height', t_tower.height)
-            print('blocks', len(t_tower), ib)
             if t_tower.height >= self.max_height:
                 break
 
