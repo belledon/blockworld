@@ -30,13 +30,13 @@ def main():
     args = parser.parse_args()
 
     print('creating starting tower')
-    base_dims = [2, 2]
+    base_dims = [10, 10]
     empty_tower = EmptyTower(base_dims)
     print('creating block for building')
     block_dims = [2, 1, 1]
     block = SimpleBlock(block_dims)
 
-    max_blocks = 8
+    max_blocks = 200
     max_height = 100
     builder = SimpleBuilder(max_blocks, max_height)
 

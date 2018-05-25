@@ -113,10 +113,10 @@ class BlockScene:
         self.create_block(stack['id'], stack['block']['dims'],
                                 stack['position'], stack['orientation'])
 
-        if 'children' in stack:
-            children = stack['children']
-            for child in children:
-                self.set_block(child)
+        # if 'children' in stack:
+        #     children = stack['children']
+        #     for child in children:
+        #         self.set_block(child)
 
     def set_base(self, dimensions, pos):
         self.create_block('base', dimensions, pos, [1, 0, 0, 0])
@@ -124,15 +124,16 @@ class BlockScene:
     def load_scene(self, scene_dict):
         # with open(scenefl, 'rU') as fl:
         scene_dict = json.loads(scene_dict)
+
         print('Loading scene:')
 
-        if not scene_dict['id'] == 'base':
+        if not scene_dict['directed']:
             raise ValueError('Improperly formated json')
 
-        self.set_base(scene_dict['block']['dims'], scene_dict['position'])
+        # self.set_base(scene_dict['block']['dims'], scene_dict['position'])
 
-        for stack in scene_dict['children']:
-            self.set_block(stack)
+        for block in scene_dict['nodes']:
+            self.set_block(block)
 
     def init_lighting(self, strength = 1., color = (1.,1.,1.)):
         scene = bpy.context.scene

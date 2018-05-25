@@ -73,14 +73,16 @@ class SimpleTower(Tower):
     def __len__(self):
         return len(self.blocks) - 1
 
-    def available_surface(self):
+    def available_surface(self, block_ids = []):
         """
         Returns surface maps valid for block placement.
         """
         g = self.blocks
         # get the top surface of each block
+        if len(block_ids) == 0:
+            block_ids = list(g)
+
         surfaces = []
-        block_ids = list(g)
         for b_id in list(g):
             block = g.nodes[b_id]
             position = block['position']
@@ -90,7 +92,7 @@ class SimpleTower(Tower):
             adjusted = surface + position
             surfaces.append(adjusted)
 
-        if len(surfaces) > 1:
+        if len(block_ids) > 1:
             # sort by height (max -> min)
             zs = np.array([s[0,2] for s in surfaces])
             order = np.argsort(zs)[::-1]
@@ -112,9 +114,19 @@ class SimpleTower(Tower):
         g.add_node(b_id, block = block, position = position,
                    orientation = orientation)
         g.add_edge(parent, b_id)
+        preds = g.predecessors(parent)
+        for p in preds:
+            g.add_edge(p, b_id)
         new_tower = SimpleTower(g)
         return new_tower
 
+    def get_stack(self, block_id):
+        """
+        Returns the parents of this block.
+        """
+        g = self.blocks
+        parents = list(g.predecessors(block_id))
+        return parents
 
     def is_stable(self):
         """
@@ -125,10 +137,13 @@ class SimpleTower(Tower):
 
     def serialize(self):
         g = self.blocks
-        d = dict(id='id', children='children', block = 'block',
+        # d = dict(id='id', children='children', block = 'block',
+        #          position='position',  orienatation='orienatation')
+        # return nx.tree_data(g, 'base', attrs=d)
+        d = dict(source='source', target='target', name='id',
+                 key='key', link='links', block = 'block',
                  position='position',  orienatation='orienatation')
-        return nx.tree_data(g, 'base', attrs=d)
-        # return nx.jit_data(g)
+        return nx.node_link_data(g, attrs=d)
 
     def __repr__(self):
         return json.dumps(self.serialize(), cls = TowerEncoder)

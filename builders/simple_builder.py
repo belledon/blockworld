@@ -82,7 +82,7 @@ class SimpleBuilder(Builder):
         return geometry.MultiPoint(grid)
 
 
-    def find_placement(self, tower_surface, block_dims):
+    def find_placement(self, tower, block_dims):
         """
         Enumerates the geometrically valid positions for
         a block surface on a tower surface.
@@ -91,57 +91,72 @@ class SimpleBuilder(Builder):
         z-axis.
         """
         print('FINDING PLACEMENT')
-        dx,dy,_ = block_dims
-        exclude = geometry.Polygon()
+        dx,dy,_ = block_dims 
+        block_z = block_dims[2] * 2
         positions = []
         parents = []
+
+        tower_surface = tower.available_surface()
         bounds = [np.hstack((np.min(cs[:,:2],axis=0), np.max(cs[:,:2],axis=0)))
                             for _,cs in tower_surface]
+        zs = [cs[0,2] for _,cs in tower_surface]
         planes = [geometry.box(*bs) for bs in bounds]
 
 
-        for row, (parent, corners) in enumerate(tower_surface):
+        for row, (parent, _) in enumerate(tower_surface):
             # only consider x-y plane
-            print('on parent', parent)
             bbox = bounds[row]
-            z = corners[0, 2]
+            z = zs[row]
 
             grid = self.make_grid(bbox)
             plane = planes[row]
-            print('starting grid', len(grid))
             # skim off any points near the edge
-            safe_plane = affinity.scale(plane, 0.9, 0.9)
-
+            safe_plane = affinity.scale(plane, 0.99, 0.99)
             grid = geometry.MultiPoint(
                 list(filter(safe_plane.contains, grid)))
-            print('after safe trimming', len(grid))
+
             # only consider points that are stable
-            for lower_plane in planes[row+1:]:
+            # + only consider the relevant `stack`
+            lower_blocks = tower.get_stack(parent)
+            for lower_block in lower_blocks:
+
+                if isinstance(grid, geometry.Point):
+                    continue
                 if len(grid) < 1:
                     continue
-                print('lower_plane', lower_plane.bounds)
+                _, lower_surface = tower.available_surface([lower_block])[0]
+                lp_bb = np.hstack((np.min(lower_surface[:,:2],axis=0),
+                                   np.max(lower_surface[:,:2],axis=0)))
+                lower_plane = geometry.box(*lp_bb)
                 grid = geometry.MultiPoint(
                     list(filter(lower_plane.contains, grid)))
 
-            print('after stability', len(grid))
+            if isinstance(grid, geometry.Point):
+                continue
             if len(grid) < 1:
                 continue
 
+            z_bound = z + block_z
+
             # removed points already used by higher planes
-            for higher_plane in planes[:row]:
+            for pr, higher_plane in enumerate(planes[:row]):
+                if isinstance(grid, geometry.Point):
+                    continue
                 if len(grid) < 1:
                     continue
+
+                if z_bound < zs[pr]:
+                    continue
                 p_bounds = higher_plane.bounds
-                # print(list(cv_hull.exterior.coords))
                 ddx = 1 + dx / (p_bounds[2] - p_bounds[0])
                 ddy = 1 + dy / (p_bounds[3] - p_bounds[1])
                 hp_scaled = affinity.scale(higher_plane, ddx, ddy)
                 to_exclude = geometry.MultiPoint(
                     list(filter(hp_scaled.contains, grid)))
                 grid = grid.difference(to_exclude)
-                print('to exclude', len(to_exclude))
-                print(to_exclude)
-                print('after exclusion', len(grid))
+
+            if isinstance(grid, geometry.Point):
+                continue
             if len(grid) < 1:
                 continue
 
@@ -153,8 +168,6 @@ class SimpleBuilder(Builder):
             positions += passed.tolist()
             parents += np.repeat(parent, len(grid)).tolist()
 
-            # exclude borders for following surfaces
-            # cv_hull = geometry.MultiPoint(filtered).convex_hull
 
         parents = np.array(parents).flatten()
         return zip(parents, positions)
@@ -163,14 +176,12 @@ class SimpleBuilder(Builder):
         """
         Finds suitable placements for a block on a tower.
         """
-        # list of (parent, surface) tuples
-        tower_surfaces = tower.available_surface()
-
         valid = []
         for rot in rotations:
-            surface = block.surface(rot, False)
+            surface = block.surface(rot)
             block_dims = np.max(surface, axis = 0) - np.min(surface, axis = 0)
-            positions = self.find_placement(tower_surfaces, block_dims)
+            block_dims[2] = surface[0, 2]
+            positions = self.find_placement(tower, block_dims)
             results = [(parent, pos, rot) for parent, pos in positions]
             valid += results
 
@@ -191,6 +202,9 @@ class SimpleBuilder(Builder):
                 break
 
             valids = self.valid_placements(t_tower, block, rotations)
+            if len(valids) == 0:
+                print('Could not place any more blocks')
+                break
             parent, pos, rot = valids[np.random.choice(len(valids))]
             t_tower = t_tower.place_block(block, parent, pos, rot)
 
