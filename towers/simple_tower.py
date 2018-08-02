@@ -48,52 +48,53 @@ class SimpleTower(Tower):
             raise ValueError(msg)
 
         self._blocks = blocks
+        self.height = blocks
 
     @property
     def height(self):
+        return self._height
 
-        g = self.blocks
+    @height.setter
+    def height(self, g):
+
         tops = [b for b in g if len(list(g.successors(b))) == 0]
         result = 0
         for top in tops:
             block = g.nodes[top]
             position = block['position']
-            orientation = block['orientation']
-            surface = block['block'].surface(orientation)
+            surface = block['block'].surface()
             # adjust the object-relative plane by its position in the tower
             adjusted = (surface + position)[0,2]
             result = max(adjusted, result)
 
         # used to adjust the total height
         base_height = g.nodes['base']['block'].dimensions[2]
-        return result - base_height
+        self._height = result - base_height
 
     # Methods #
 
     def __len__(self):
         return len(self.blocks) - 1
 
-    def available_surface(self, block_ids = []):
+    def available_surface(self, block_ids = None):
         """
         Returns surface maps valid for block placement.
         """
         g = self.blocks
         # get the top surface of each block
-        if len(block_ids) == 0:
+        if block_ids is None:
             block_ids = list(g)
 
         surfaces = []
-        for b_id in list(g):
-            block = g.nodes[b_id]
-            position = block['position']
-            orientation = block['orientation']
-            surface = block['block'].surface(orientation)
+        for b_id in block_ids:
+            block_node = g.nodes[b_id]
+            block = block_node['block']
             # adjust the object-relative plane by its position in the tower
-            adjusted = surface + position
+            adjusted = block.surface() + block_node['position']
             surfaces.append(adjusted)
 
-        if len(block_ids) > 1:
-            # sort by height (max -> min)
+        # sort by height (max -> min)
+        if len(surfaces) > 1:
             zs = np.array([s[0,2] for s in surfaces])
             order = np.argsort(zs)[::-1]
             surfaces = np.array(surfaces)[order]
@@ -101,22 +102,21 @@ class SimpleTower(Tower):
 
         return list(zip(block_ids, surfaces))
 
-    def place_block(self, block, parent, position, orientation):
+    def place_block(self, block, parent, position):
         """
         Returns a new tower with the given blocked added.
         """
         g = self.blocks
         b_id = '{0:d}'.format(len(g))
+
         # adjust z axis by center of the object
-        surface = block.surface(orientation)
+        surface = block.surface()
         dz = surface[0,2]
         position = np.add(position, [0, 0, dz])
-        g.add_node(b_id, block = block, position = position,
-                   orientation = orientation)
+
+        # add node to graph
+        g.add_node(b_id, block = block, position = position)
         g.add_edge(parent, b_id)
-        preds = g.predecessors(parent)
-        for p in preds:
-            g.add_edge(p, b_id)
         new_tower = SimpleTower(g)
         return new_tower
 
@@ -137,9 +137,6 @@ class SimpleTower(Tower):
 
     def serialize(self):
         g = self.blocks
-        # d = dict(id='id', children='children', block = 'block',
-        #          position='position',  orienatation='orienatation')
-        # return nx.tree_data(g, 'base', attrs=d)
         d = dict(source='source', target='target', name='id',
                  key='key', link='links', block = 'block',
                  position='position',  orienatation='orienatation')

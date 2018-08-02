@@ -10,12 +10,9 @@ class BaseBlock(SimpleBlock):
     Instance of `SimpleBlock` designed act as the tower base.
 
     Attributes:
-        dimensions (tuple(int)): The x,y,z dimensions of the block.
+        dimensions (tuple(int)): The x,y dimensions of the base.
         mat (np.ndarray(float)): The matrix representing the box world with a
             fixed height of 1.
-        # candidates
-        rendering (): Parameters used for rendering
-
     """
 
     # Properties #

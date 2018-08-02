@@ -82,113 +82,114 @@ class SimpleBuilder(Builder):
         return geometry.MultiPoint(grid)
 
 
-    def find_placement(self, tower, block_dims):
+    def find_placement(self, tower, block_dims, stability = False):
         """
         Enumerates the geometrically valid positions for
         a block surface on a tower surface.
 
+        Arguments:
+           tower (`Tower`): Base to build on
+           block_dims (`np.ndarray`): Dimensions of new block
+           stability (bool): If `True`, ensures global stability (False).
+
+        Returns:
+           An list of tuples of the form [(`Parent`, position)..]
+
         The tower surfaces are expected to be sorted along the
         z-axis.
         """
-        print('FINDING PLACEMENT')
-        dx,dy,_ = block_dims 
+        dx,dy,_ = block_dims
         block_z = block_dims[2] * 2
         positions = []
         parents = []
 
         tower_surface = tower.available_surface()
-        bounds = [np.hstack((np.min(cs[:,:2],axis=0), np.max(cs[:,:2],axis=0)))
-                            for _,cs in tower_surface]
         zs = [cs[0,2] for _,cs in tower_surface]
-        planes = [geometry.box(*bs) for bs in bounds]
+
+        bounds = [np.hstack(
+            (np.min(cs[:,:2],axis=0), np.max(cs[:,:2],axis=0)))
+                  for _,cs in tower_surface]
+        surface_planes = [geometry.box(*bs) for bs in bounds]
 
 
         for row, (parent, _) in enumerate(tower_surface):
             # only consider x-y plane
             bbox = bounds[row]
             z = zs[row]
-
-            grid = self.make_grid(bbox)
-            plane = planes[row]
-            # skim off any points near the edge
-            safe_plane = affinity.scale(plane, 0.99, 0.99)
-            grid = geometry.MultiPoint(
-                list(filter(safe_plane.contains, grid)))
-
-            # only consider points that are stable
-            # + only consider the relevant `stack`
-            lower_blocks = tower.get_stack(parent)
-            for lower_block in lower_blocks:
-
-                if isinstance(grid, geometry.Point):
-                    continue
-                if len(grid) < 1:
-                    continue
-                _, lower_surface = tower.available_surface([lower_block])[0]
-                lp_bb = np.hstack((np.min(lower_surface[:,:2],axis=0),
-                                   np.max(lower_surface[:,:2],axis=0)))
-                lower_plane = geometry.box(*lp_bb)
-                grid = geometry.MultiPoint(
-                    list(filter(lower_plane.contains, grid)))
-
-            if isinstance(grid, geometry.Point):
-                continue
-            if len(grid) < 1:
-                continue
-
             z_bound = z + block_z
 
+            grid = self.make_grid(bbox)
+            plane = surface_planes[row]
+
+            # skim off any points near the edge
+            safe_plane = affinity.scale(plane, 0.99, 0.99)
+            safe_points = list(filter(safe_plane.contains, grid))
+            if len(safe_points) == 0:
+                # no safe points
+                continue
+
+            safe_grid = geometry.MultiPoint(safe_points)
+
+            if stability:
+
+                # only consider points that are stable
+                # + only consider the relevant `stack`
+                lower_blocks = tower.get_stack(parent)
+                for lower_block in lower_blocks:
+
+                    _, lower_surface = tower.available_surface([lower_block])[0]
+                    lp_bb = np.hstack((np.min(lower_surface[:,:2],axis=0),
+                                       np.max(lower_surface[:,:2],axis=0)))
+                    lower_plane = geometry.box(*lp_bb)
+                    lower_filter = list(filter(lower_plane.contains, grid))
+                    if len(lower_filter) == 0:
+                        continue
+                    grid = geometry.MultiPoint(lower_filter)
+
+
+
             # removed points already used by higher planes
-            for pr, higher_plane in enumerate(planes[:row]):
-                if isinstance(grid, geometry.Point):
-                    continue
-                if len(grid) < 1:
-                    continue
+            for pr, higher_plane in enumerate(surface_planes[:row]):
 
                 if z_bound < zs[pr]:
+                    # ignore if higher planes don't intersect along z
                     continue
+
+                print(z_bound, zs[pr])
                 p_bounds = higher_plane.bounds
                 ddx = 1 + dx / (p_bounds[2] - p_bounds[0])
                 ddy = 1 + dy / (p_bounds[3] - p_bounds[1])
                 hp_scaled = affinity.scale(higher_plane, ddx, ddy)
-                to_exclude = geometry.MultiPoint(
-                    list(filter(hp_scaled.contains, grid)))
-                grid = grid.difference(to_exclude)
+                hp_filter_f = lambda p : not hp_scaled.contains(p)
+                hp_filter = list(filter(hp_filter_f, grid))
+                if len(hp_filter) == 0:
+                    break
+                grid = geometry.MultiPoint(hp_filter)
 
-            if isinstance(grid, geometry.Point):
-                continue
-            if len(grid) < 1:
-                continue
+            if len(grid) > 0:
+                # store good points and associated parent ids
+                passed = np.empty((len(grid), 3))
+                passed[:,:2] = np.vstack([p.coords for p in grid])
+                passed[:,2] = z
 
-            # store good points and associated parent ids
-            passed = np.empty((len(grid), 3))
-            passed[:,:2] = np.vstack([p.coords for p in grid])
-            passed[:,2] = z
-
-            positions += passed.tolist()
-            parents += np.repeat(parent, len(grid)).tolist()
+                positions += passed.tolist()
+                parents += np.repeat(parent, len(grid)).tolist()
 
 
         parents = np.array(parents).flatten()
         return zip(parents, positions)
 
-    def valid_placements(self, tower, block, rotations):
+    def valid_placements(self, tower, block):
         """
         Finds suitable placements for a block on a tower.
         """
-        valid = []
-        for rot in rotations:
-            surface = block.surface(rot)
-            block_dims = np.max(surface, axis = 0) - np.min(surface, axis = 0)
-            block_dims[2] = surface[0, 2]
-            positions = self.find_placement(tower, block_dims)
-            results = [(parent, pos, rot) for parent, pos in positions]
-            valid += results
+        surface = block.surface()
+        block_dims = np.max(surface, axis = 0) - np.min(surface, axis = 0)
+        block_dims[2] = surface[0, 2]
+        placements = self.find_placement(tower, block_dims)
+        return list(placements)
 
-        print('randomly generated ', len(valid))
-        return valid
-
-    def __call__(self, base_tower, block, rotations):
+    def __call__(self, base_tower, block):
         """
         Builds a tower ontop of the given base.
 
@@ -201,11 +202,11 @@ class SimpleBuilder(Builder):
             if t_tower.height >= self.max_height:
                 break
 
-            valids = self.valid_placements(t_tower, block, rotations)
+            valids = self.valid_placements(t_tower, block)
             if len(valids) == 0:
                 print('Could not place any more blocks')
                 break
-            parent, pos, rot = valids[np.random.choice(len(valids))]
-            t_tower = t_tower.place_block(block, parent, pos, rot)
+            parent, pos = valids[np.random.choice(len(valids))]
+            t_tower = t_tower.place_block(block, parent, pos)
 
         return t_tower

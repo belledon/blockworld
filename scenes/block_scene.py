@@ -18,17 +18,21 @@ def load_handler(dummy):
 bpy.app.handlers.load_post.append(load_handler)
 #################################################
 
-'''
+
+
+materials_path = os.path.dirname(os.path.realpath(__file__))
+
+
+class BlockScene:
+
+    '''
     blendfile : The .blend world file
     scenefile : Either a .json file of parameters or a dictionary of the same
         structure
     frames : The total number of frames to render
     (optional) warmup : (default 6) The number of frames to bake prior to
         rendering. Sets the total number of bakes frames to `frames` + `warmup`
-'''
-
-
-class BlockScene:
+    '''
 
     def __init__(self, scene_json, frames = 1, warmup = 3, override={},
                  wire_frame = False):
@@ -38,18 +42,21 @@ class BlockScene:
         self.override = override
         self.wire_frame = wire_frame
         self.phys_objs = []
-        # with Suppressor():
-        #     bpy.ops.wm.open_mainfile(filepath=blendfile)
         bpy.ops.object.mode_set(mode='OBJECT')
         bpy.ops.object.select_by_type(type='MESH')
         bpy.ops.object.delete(use_global=False)
         for item in bpy.data.meshes:
             bpy.data.meshes.remove(item)
 
+        self.load_materials()
         self.load_scene(scene_json)
         bpy.context.scene.frame_set(1)
         bpy.context.scene.frame_end = frames + warmup
         bpy.context.scene.frame_step = bpy.context.scene.frame_end - 1
+
+    def load_materials(self):
+        bpy.ops.wm.append(filename = 'materials',
+                          directory = materials_path)
 
     def select_obj(self, obj):
         bpy.ops.object.select_all(action='DESELECT')
@@ -61,10 +68,8 @@ class BlockScene:
     def rotate_obj(self, obj, rot):
         self.select_obj(obj)
         obj.rotation_mode = 'QUATERNION'
-        # print(obj.name, 'OLD ROT', obj.rotation_quaternion)
         obj.rotation_quaternion = rot
         bpy.context.scene.update()
-        # print(obj.name, 'NEW ROT', obj.rotation_quaternion)
 
     def move_obj(self, obj, pos):
         self.select_obj(obj)
@@ -84,14 +89,13 @@ class BlockScene:
         bpy.context.scene.update()
 
 
-    def create_block(self, b_id, dimensions, pos, rot):
+    def create_block(self, b_id, dimensions, pos):
         """
         Initializes a block object.
         """
-        rot = mathutils.Quaternion(rot).to_euler()
         bpy.ops.mesh.primitive_cube_add(location=pos,
-                                        rotation= rot,
-            view_align=False, enter_editmode=False)
+                                        view_align=False,
+                                        enter_editmode=False)
         ob = bpy.context.object
         ob.name = b_id
         ob.show_name = True
@@ -101,8 +105,6 @@ class BlockScene:
         self.scale_obj(ob, dimensions)
         # self.rotate_obj(ob, rot)
         ob.matrix_world.translation 
-        # bbox_corners = [ob.matrix_world * Vector(corner) for corner in ob.bound_box]
-        # print(bbox_corners)
 
     def set_block(self, stack):
         """
@@ -111,12 +113,7 @@ class BlockScene:
         Recursively initializes children.
         """
         self.create_block(stack['id'], stack['block']['dims'],
-                                stack['position'], stack['orientation'])
-
-        # if 'children' in stack:
-        #     children = stack['children']
-        #     for child in children:
-        #         self.set_block(child)
+                                stack['position'])
 
     def set_base(self, dimensions, pos):
         self.create_block('base', dimensions, pos, [1, 0, 0, 0])
@@ -164,7 +161,7 @@ class BlockScene:
 
         bpy.context.scene.rigidbody_world.point_cache.frame_end = bpy.context.scene.frame_end
         bpy.context.scene.rigidbody_world.solver_iterations = 100
-        bpy.context.scene.rigidbody_world.steps_per_second = 240 # CHANGE BACK TO 240 AFTER DEBUGGING!!!!!
+        bpy.context.scene.rigidbody_world.steps_per_second = 240
         bpy.context.scene.rigidbody_world.time_scale = 10
         bpy.context.scene.rigidbody_world.use_split_impulse = 1
 

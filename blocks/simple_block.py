@@ -63,7 +63,7 @@ class SimpleBlock(Block):
 
     # Methods #
 
-    def surface(self, orientation = Quaternion(), top = True, step=0.10):
+    def surface(self, orientation = Quaternion()):
         """
         Returns the surface plane.
 
@@ -79,19 +79,6 @@ class SimpleBlock(Block):
 
         return corners
 
-        # # create grid
-        # t = corners[np.argsort(corners[:, 1]), :2]
-        # t = t[np.argsort(t[:, 0])]
-
-
-        # xs = np.arange(t[0,0], t[2,0] + step, step)
-        # ys = np.arange(t[0,1], t[1,1] + step, step)
-        # zs = np.repeat(corners[0,2], len(xs) * len(ys))
-        # if not top:
-        #     zs = -1 * zs
-        # surface_t = np.array(np.meshgrid(xs, ys)).T.reshape(-1, 2)
-        # surface = np.hstack((surface_t, np.expand_dims(zs, axis=1)))
-        # return surface
 
     def serialize(self):
         """

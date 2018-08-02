@@ -14,10 +14,10 @@ from blocks.simple_block import SimpleBlock
 from scenes.block_scene import BlockScene
 from utils.json_encoders import TowerEncoder
 
-rotations = [Quaternion(axis=[1, 0, 0], angle = np.pi/2),
-             Quaternion(axis=[0, 1, 0], angle = np.pi/2),
-             Quaternion(axis=[0, 0, 1], angle = np.pi/2),
-             Quaternion(axis=[1, 0, 0], angle = 0)]
+# rotations = [Quaternion(axis=[1, 0, 0], angle = np.pi/2),
+#              Quaternion(axis=[0, 1, 0], angle = np.pi/2),
+#              Quaternion(axis=[0, 0, 1], angle = np.pi/2),
+#              Quaternion(axis=[1, 0, 0], angle = 0)]
 
 rotations = [Quaternion(axis=[1, 0, 0], angle = 0),]
              # Quaternion(axis=[0, 1, 0], angle = np.pi/2)]
@@ -27,20 +27,25 @@ def main():
                                                    'and associated classes'))
 
     parser.add_argument('out', type = str, help = 'Path to save render.')
+    parser.add_argument('--number', type = int, default = 2,
+                        help = 'Number of blocks.')
+    parser.add_argument('--height', type = float, default = 10,
+                        help = 'Height of the tower.')
+
     args = parser.parse_args()
 
     print('creating starting tower')
-    base_dims = [10, 10]
+    base_dims = [3, 3]
     empty_tower = EmptyTower(base_dims)
     print('creating block for building')
     block_dims = [2, 1, 1]
     block = SimpleBlock(block_dims)
 
-    max_blocks = 200
-    max_height = 100
+    max_blocks = args.number
+    max_height = args.height
     builder = SimpleBuilder(max_blocks, max_height)
 
-    new_tower = builder(empty_tower, block, rotations)
+    new_tower = builder(empty_tower, block)
 
     tower_json = repr(new_tower)
 

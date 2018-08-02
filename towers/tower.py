@@ -15,7 +15,7 @@ class Tower(ABC):
     Parent/child relationships describe the building process where the
     parent is the block on which the child was placed.
 
-    Neighbors are simply unintend, adjacent (touching) blocks. 
+    Neighbors are simply unintend, adjacent (touching) blocks.
 
     Attributes:
         base_dimensions (tuple(float)): The dimensions of the base.
