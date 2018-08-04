@@ -20,7 +20,7 @@ bpy.app.handlers.load_post.append(load_handler)
 
 
 
-materials_path = os.path.dirname(os.path.realpath(__file__))
+materials_path = os.path.dirname(os.path.realpath(__file__)) + '/materials.blend'
 
 
 class BlockScene:
@@ -47,16 +47,14 @@ class BlockScene:
         bpy.ops.object.delete(use_global=False)
         for item in bpy.data.meshes:
             bpy.data.meshes.remove(item)
+        with Suppressor():
+            bpy.ops.wm.open_mainfile(filepath=materials_path)
 
-        self.load_materials()
         self.load_scene(scene_json)
         bpy.context.scene.frame_set(1)
         bpy.context.scene.frame_end = frames + warmup
         bpy.context.scene.frame_step = bpy.context.scene.frame_end - 1
 
-    def load_materials(self):
-        bpy.ops.wm.append(filename = 'materials',
-                          directory = materials_path)
 
     def select_obj(self, obj):
         bpy.ops.object.select_all(action='DESELECT')
@@ -104,19 +102,42 @@ class BlockScene:
         # self.move_obj(ob, pos)
         self.scale_obj(ob, dimensions)
         # self.rotate_obj(ob, rot)
-        ob.matrix_world.translation 
+        ob.matrix_world.translation
+
+    def set_appearance(self, b_id, mat):
+        obj = bpy.data.objects[b_id]
+        obj.active_material = bpy.data.materials[mat]
+        bpy.context.scene.update()
+
 
     def set_block(self, stack):
         """
         Initializes blocks described in the stack.
-
-        Recursively initializes children.
         """
-        self.create_block(stack['id'], stack['block']['dims'],
+        if stack['id'] == 'base':
+            self.set_base(stack['block']['dims'], stack['position'])
+            self.set_appearance('base', 'Plastic')
+        else:
+            self.create_block(stack['id'], stack['block']['dims'],
                                 stack['position'])
+            if 'appearance' in stack:
+                self.set_appearance(stack['id'], stack['appearance'])
+            else:
+                self.set_appearance(stack['id'], 'Wood')
 
     def set_base(self, dimensions, pos):
-        self.create_block('base', dimensions, pos, [1, 0, 0, 0])
+        bpy.ops.mesh.primitive_cylinder_add(
+            location=pos,
+            view_align=False,
+            enter_editmode=False)
+        ob = bpy.context.object
+        ob.name = 'base'
+        ob.show_name = False
+        me = ob.data
+        me.name = '{}_Mesh'.format('base')
+        self.scale_obj(ob, (10, 10, 1))
+        ob.matrix_world.translation
+
 
     def load_scene(self, scene_dict):
         # with open(scenefl, 'rU') as fl:
@@ -156,6 +177,7 @@ class BlockScene:
         bpy.context.scene.cycles.samples = 1000
         bpy.context.scene.render.tile_x = 16
         bpy.context.scene.render.tile_y = 16
+        bpy.context.scene.render.engine = 'CYCLES'
 
     def bake_physics(self):
 

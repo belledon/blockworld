@@ -75,7 +75,7 @@ class SimpleBuilder(Builder):
 
     # Methods #
 
-    def make_grid(self, bbox, step = 0.25):
+    def make_grid(self, bbox, step = 0.1):
         xs = np.arange(bbox[0], bbox[2] + step, step)
         ys = np.arange(bbox[1], bbox[3] + step, step)
         grid = np.array(np.meshgrid(xs, ys)).T.reshape(-1, 2)
@@ -148,23 +148,26 @@ class SimpleBuilder(Builder):
 
 
 
-            # removed points already used by higher planes
-            for pr, higher_plane in enumerate(surface_planes[:row]):
+            # remove points already used by higher planes
+            for pr, higher_plane in enumerate(surface_planes):
 
-                if z_bound < zs[pr]:
+                if (z_bound < (zs[pr] )) and pr != row:
                     # ignore if higher planes don't intersect along z
                     continue
 
-                print(z_bound, zs[pr])
                 p_bounds = higher_plane.bounds
                 ddx = 1 + dx / (p_bounds[2] - p_bounds[0])
                 ddy = 1 + dy / (p_bounds[3] - p_bounds[1])
-                hp_scaled = affinity.scale(higher_plane, ddx, ddy)
+                hp_scaled = affinity.scale(higher_plane, ddx, ddy, origin ='centroid')
+                print('bounds', hp_scaled.bounds, higher_plane.bounds)
                 hp_filter_f = lambda p : not hp_scaled.contains(p)
                 hp_filter = list(filter(hp_filter_f, grid))
                 if len(hp_filter) == 0:
                     break
+                np.set_printoptions(suppress=True)
+                # print(np.vstack([p.coords for p in hp_filter]))
                 grid = geometry.MultiPoint(hp_filter)
+
 
             if len(grid) > 0:
                 # store good points and associated parent ids
@@ -207,6 +210,7 @@ class SimpleBuilder(Builder):
                 print('Could not place any more blocks')
                 break
             parent, pos = valids[np.random.choice(len(valids))]
+            print(ib+1, pos)
             t_tower = t_tower.place_block(block, parent, pos)
 
         return t_tower
