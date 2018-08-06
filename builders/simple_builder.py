@@ -82,7 +82,7 @@ class SimpleBuilder(Builder):
         return geometry.MultiPoint(grid)
 
 
-    def find_placement(self, tower, block_dims, stability = False):
+    def find_placement(self, tower, block_dims, stability = True):
         """
         Enumerates the geometrically valid positions for
         a block surface on a tower surface.
@@ -131,28 +131,29 @@ class SimpleBuilder(Builder):
                 continue
             grid = geometry.MultiPoint(safe_points)
 
-            # # skim off any points near the edge
-            # safe_plane = affinity.scale(plane, 0.95, 0.95)
-            # safe_points = list(filter(safe_plane.contains, grid))
-            # if len(safe_points) == 0:
-            #     # no safe points
-            #     continue
-            # grid = geometry.MultiPoint(safe_points)
+            # skim off any points near the edge
+            safe_plane = affinity.scale(plane, 0.95, 0.95)
+            safe_points = list(filter(safe_plane.contains, grid))
+            if len(safe_points) == 0:
+                # no safe points
+                continue
+            grid = geometry.MultiPoint(safe_points)
 
 
             if stability:
                 # only consider points that are stable
                 # + only consider the relevant `stack`
                 lower_blocks = tower.get_stack(parent)
-                for lower_block in lower_blocks:
-
-                    _, lower_surface = tower.available_surface([lower_block])[0]
+                lower_surfaces = tower.available_surface(lower_blocks)
+                for l_block, l_surface in zip(lower_blocks, lower_surfaces):
+                    _, lower_surface = l_surface
                     lp_bb = np.hstack((np.min(lower_surface[:,:2],axis=0),
                                        np.max(lower_surface[:,:2],axis=0)))
                     lower_plane = geometry.box(*lp_bb)
                     lower_filter = list(filter(lower_plane.contains, grid))
                     if len(lower_filter) == 0:
-                        continue
+                        grid = []
+                        break
                     grid = geometry.MultiPoint(lower_filter)
 
 

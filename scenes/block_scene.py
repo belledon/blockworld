@@ -113,10 +113,10 @@ class BlockScene:
                                         view_align=False,
                                         enter_editmode=False)
         ob = bpy.context.object
-        ob.name = object_d['id']
+        ob.name = '{0:d}'.format(object_d['id'])
         ob.show_name = True
         me = ob.data
-        me.name = '{}_Mesh'.format(object_d['id'])
+        me.name = '{0:d}_Mesh'.format(object_d['id'])
         self.scale_obj(ob, block['dims'])
         ob.matrix_world.translation
 
@@ -162,7 +162,7 @@ class BlockScene:
         """
         Initializes blocks described in the stack.
         """
-        if stack['id'] == 'base':
+        if stack['id'] == 0:
             self.set_base(stack['block']['dims'], stack['position'])
         else:
             self.create_block(stack)

@@ -36,7 +36,7 @@ class EmptyTower(SimpleTower):
         ds = np.array(ds)
         g = nx.DiGraph()
         base = BaseBlock(ds)
-        g.add_node('base', block = base, position = [0, 0, -0.5],
+        g.add_node(0, block = base, position = [0, 0, -0.5],
                    orientation = Quaternion())
         self._blocks = g
 

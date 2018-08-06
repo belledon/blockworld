@@ -38,7 +38,7 @@ class SimpleTower(Tower):
             msg = 'Type of given blocks is not valid.'
             raise ValueError(msg)
 
-        if not 'base' in blocks:
+        if not 0 in blocks:
             msg = 'Tower does not have a base.'
             raise ValueError(msg)
 
@@ -68,7 +68,7 @@ class SimpleTower(Tower):
             result = max(adjusted, result)
 
         # used to adjust the total height
-        base_height = g.nodes['base']['block'].dimensions[2]
+        base_height = g.nodes[0]['block'].dimensions[2]
         self._height = result - base_height
 
     # Methods #
@@ -107,7 +107,7 @@ class SimpleTower(Tower):
         Returns a new tower with the given blocked added.
         """
         g = self.blocks
-        b_id = '{0:d}'.format(len(g))
+        b_id = len(g)
 
         # adjust z axis by center of the object
         surface = block.surface()
@@ -125,7 +125,7 @@ class SimpleTower(Tower):
         Returns the parents of this block.
         """
         g = self.blocks
-        parents = list(g.predecessors(block_id))
+        parents = list(nx.shortest_path(g, source = 0, target = block_id))
         return parents
 
     def is_stable(self):

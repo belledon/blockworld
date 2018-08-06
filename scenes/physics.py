@@ -108,7 +108,7 @@ def extract_feature(blocks, feature):
     order = []
     for block in blocks:
         b_id = block['id']
-        if b_id != 'base':
+        if b_id > 0:
             values.append(block[feature])
             order.append(int(b_id) - 1)
     return np.array(values)[order]
@@ -124,7 +124,7 @@ def apply_feature(blocks, feature, values):
 
     for block in blocks:
         b_id = block['id']
-        if b_id != 'base':
+        if b_id > 0:
             block[feature] = values[int(b_id) - 1]
 
     return blocks

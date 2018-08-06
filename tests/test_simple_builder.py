@@ -50,9 +50,8 @@ def main():
     tower_json = repr(new_tower)
 
     pprint.pprint(json.loads(repr(new_tower)))
-    # pprint.pprint(tower_json)
-    # print(pprint.pprint(json.loads(json.dumps(tower_json, cls=TowerEncoder))))
-    # json_io = io.BytesIO(json.dumps(tower_json))
+    with open(os.path.join(args.out, 'test.json'), 'w') as f:
+        json.dump(json.loads(tower_json), f, indent = 4, sort_keys = True)
 
     scene = BlockScene(tower_json)
     img_out = os.path.join(args.out, 'test_render')
