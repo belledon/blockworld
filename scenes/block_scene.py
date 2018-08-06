@@ -37,23 +37,33 @@ class BlockScene:
     def __init__(self, scene_json, frames = 1, warmup = 3, override={},
                  wire_frame = False):
 
+        # Initialize attributes
         self.warmup = warmup
         self.frames = frames
         self.override = override
         self.wire_frame = wire_frame
+        self.materials = ['Metal', 'Wood']
+        self.density = [5.0, 1.0]
+        self.friction = [0.2, 0.5]
         self.phys_objs = []
+
+        # Clear scene
         bpy.ops.object.mode_set(mode='OBJECT')
         bpy.ops.object.select_by_type(type='MESH')
         bpy.ops.object.delete(use_global=False)
         for item in bpy.data.meshes:
             bpy.data.meshes.remove(item)
+
+        # Load materials and textures
         with Suppressor():
             bpy.ops.wm.open_mainfile(filepath=materials_path)
 
-        self.load_scene(scene_json)
         bpy.context.scene.frame_set(1)
         bpy.context.scene.frame_end = frames + warmup
         bpy.context.scene.frame_step = bpy.context.scene.frame_end - 1
+
+        # Parse tower structure
+        self.load_scene(scene_json)
 
 
     def select_obj(self, obj):
@@ -86,46 +96,54 @@ class BlockScene:
         bpy.ops.object.origin_set(type='ORIGIN_GEOMETRY')
         bpy.context.scene.update()
 
-
-    def create_block(self, b_id, dimensions, pos):
-        """
-        Initializes a block object.
-        """
-        bpy.ops.mesh.primitive_cube_add(location=pos,
-                                        view_align=False,
-                                        enter_editmode=False)
-        ob = bpy.context.object
-        ob.name = b_id
-        ob.show_name = True
-        me = ob.data
-        me.name = '{}_Mesh'.format(b_id)
-        # self.move_obj(ob, pos)
-        self.scale_obj(ob, dimensions)
-        # self.rotate_obj(ob, rot)
-        ob.matrix_world.translation
-
     def set_appearance(self, b_id, mat):
+        """
+        Assigns a material to a block.
+        """
         obj = bpy.data.objects[b_id]
         obj.active_material = bpy.data.materials[mat]
         bpy.context.scene.update()
 
+    def create_block(self, object_d):
+        """
+        Initializes a block object.
+        """
+        block = object_d['block']
+        bpy.ops.mesh.primitive_cube_add(location=object_d['position'],
+                                        view_align=False,
+                                        enter_editmode=False)
+        ob = bpy.context.object
+        ob.name = object_d['id']
+        ob.show_name = True
+        me = ob.data
+        me.name = '{}_Mesh'.format(object_d['id'])
+        self.scale_obj(ob, block['dims'])
+        ob.matrix_world.translation
 
-    def set_block(self, stack):
-        """
-        Initializes blocks described in the stack.
-        """
-        if stack['id'] == 'base':
-            self.set_base(stack['block']['dims'], stack['position'])
-            self.set_appearance('base', 'Plastic')
+        if 'material' in object_d and 'congruency' in object_d:
+            cong = int(object_d['congruency'])
+            mat = self.materials[object_d['material']]
+            phys_key = not (cong ^ object_d['material'])
+            mass = self.density[phys_key] * \
+                   np.prod(block['dims'])
+            friction = self.friction[phys_key]
         else:
-            self.create_block(stack['id'], stack['block']['dims'],
-                                stack['position'])
-            if 'appearance' in stack:
-                self.set_appearance(stack['id'], stack['appearance'])
-            else:
-                self.set_appearance(stack['id'], 'Wood')
+            mat = 'Wood'
+            mass = self.density[1] * np.prod(block['dims'])
+            friction = self.friction[1]
+
+        ob.active_material = bpy.data.materials[mat]
+        bpy.ops.rigidbody.objects_add(type='ACTIVE')
+        ob.rigid_body.mass = mass
+        ob.rigid_body.friction = friction
+        phys_objs = self.phys_objs
+        phys_objs.append(object_d['id'])
+        self.phys_objs = phys_objs
 
     def set_base(self, dimensions, pos):
+        """
+        Creates the table on which the blocks will stand.
+        """
         bpy.ops.mesh.primitive_cylinder_add(
             location=pos,
             view_align=False,
@@ -136,12 +154,23 @@ class BlockScene:
         me = ob.data
         me.name = '{}_Mesh'.format('base')
         self.scale_obj(ob, (10, 10, 1))
-        ob.matrix_world.translation
+        self.set_appearance('base', 'Marble')
+        bpy.ops.rigidbody.object_add(type='PASSIVE')
+        bpy.ops.rigidbody.constraint_add(type='FIXED')
 
+    def set_block(self, stack):
+        """
+        Initializes blocks described in the stack.
+        """
+        if stack['id'] == 'base':
+            self.set_base(stack['block']['dims'], stack['position'])
+        else:
+            self.create_block(stack)
 
     def load_scene(self, scene_dict):
         # with open(scenefl, 'rU') as fl:
-        scene_dict = json.loads(scene_dict)
+        if isinstance(scene_dict, str):
+            scene_dict = json.loads(scene_dict)
 
         print('Loading scene:')
 
@@ -166,11 +195,8 @@ class BlockScene:
         lamp_object.location = (0.0, 0.0, 9.0)
 
 
-    def set_rendering_params(self, resolution = (256, 256)):
+    def set_rendering_params(self, resolution):
         bpy.context.scene.render.fps = 60
-
-        if 'resolution' in self.override:
-            resolution = self.override['resolution']
         bpy.context.scene.render.resolution_x = resolution[0]
         bpy.context.scene.render.resolution_y = resolution[1]
         bpy.context.scene.render.resolution_percentage = 100
@@ -200,13 +226,41 @@ class BlockScene:
                 bpy.ops.ptcache.bake(override, bake=True)
             break
 
-    """
+    def get_trace(self, frames = None):
+        """
+        Obtains world state for select frames.
+        Currently returns the position of each rigid body.
+        """
+        if frames is None:
+            frames = range(bpy.context.scene.frame_end - self.warmup)
+
+        n_objs = len(self.phys_objs)
+        results = []
+        for frame in frames:
+            bpy.context.scene.frame_set(frame + self.warmup)
+            bpy.context.scene.update()
+
+            frame_d = {}
+            positions = np.zeros((n_objs, 3))
+            for obj_id in self.phys_objs:
+                obj_ind = int(obj_id) - 1
+                ob = bpy.context.scene.objects[obj_id]
+                positions[obj_ind] = ob.matrix_world.to_translation()
+
+            frame_d['position'] = positions
+            results.append(frame_d)
+
+        return results
+
+    def render(self, output_name, frames, show = [],
+               resolution = (256, 256)):
+        """
         output_name: Path to save frames
         frames: a list of frames to render (shifted by warmup)
         show: a list of object names to render
-    """
-    def render(self, output_name, frames, show = []):
+        """
         print('rendering')
+        self.set_rendering_params(resolution)
         if len(show) > 0:
 
             for obj in bpy.context.scene.objects:
@@ -225,6 +279,9 @@ class BlockScene:
             bpy.ops.render.render(write_still=True)
 
     def save(self, out):
+        """
+        Writes the scene as a blend file.
+        """
         bpy.ops.wm.save_as_mainfile(filepath=out)
 
 # From https://stackoverflow.com/questions/11130156/suppress-stdout-stderr-print-from-python-functions

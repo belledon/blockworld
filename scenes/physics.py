@@ -1,3 +1,4 @@
+import copy
 import pprint
 import numpy as np
 from . import block_scene
@@ -8,7 +9,7 @@ class TowerTester:
     Controls search over a tower structure.
     """
 
-    def __init__(tower, materials):
+    def __init__(self, tower, materials):
         self.structure = tower
         self.materials = materials
 
@@ -25,7 +26,7 @@ class TowerTester:
 
     @property
     def mat_ps(self):
-        return self._map_ps
+        return self._mat_ps
 
     #-------------------------------------------------------------------------#
 
@@ -37,13 +38,13 @@ class TowerTester:
         """
         temp_tower = copy.copy(self.structure)
         blocks = temp_tower['nodes']
-        n_blocks = len(blocks)
+        n_blocks = len(blocks) - 1
         materials = np.random.choice([1, 0],
                                      size = n_blocks,
                                      p = self.mat_ps)
 
         blocks = apply_feature(blocks, 'material', materials)
-        blocks = apply_feature(blocks, 'congruency', bool(np.ones(n_blocks)))
+        blocks = apply_feature(blocks, 'congruency', np.ones(n_blocks))
         temp_tower['nodes'] = blocks
         return temp_tower
 
@@ -104,23 +105,26 @@ class TowerTester:
 def extract_feature(blocks, feature):
     n_blocks = len(blocks)
     values = []
-    for i in range(n_blocks):
-        values.append(blocks['{0:d}'.format(i)[feature])
-    return values
+    order = []
+    for block in blocks:
+        b_id = block['id']
+        if b_id != 'base':
+            values.append(block[feature])
+            order.append(int(b_id) - 1)
+    return np.array(values)[order]
 
 def apply_feature(blocks, feature, values):
     """
     Applys a feature to a set of blocks in a tower
     """
-    n_blocks = len(blocks)
+    n_blocks = len(blocks) - 1
     n_values = len(values)
     if n_blocks != n_values:
         raise ValueError('Block, values missmatch')
 
-    pprint.pprint(blocks)
-    for b_i in n_blocks:
-        block = blocks['{0:d]}'.format(b_i)]
-        block[feature] = values[b_i]
-    pprint.pprint(blocks)
+    for block in blocks:
+        b_id = block['id']
+        if b_id != 'base':
+            block[feature] = values[int(b_id) - 1]
 
     return blocks

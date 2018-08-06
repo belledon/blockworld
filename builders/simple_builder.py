@@ -122,6 +122,24 @@ class SimpleBuilder(Builder):
             grid = self.make_grid(bbox)
             plane = surface_planes[row]
 
+            # bound to points within the base boundary
+            base_boundary = affinity.scale(surface_planes[-1], 1.5, 1.5)
+            safe_plane = affinity.scale(plane, 0.95, 0.95)
+            safe_points = list(filter(safe_plane.contains, grid))
+            if len(safe_points) == 0:
+                # no safe points
+                continue
+            grid = geometry.MultiPoint(safe_points)
+
+            # # skim off any points near the edge
+            # safe_plane = affinity.scale(plane, 0.95, 0.95)
+            # safe_points = list(filter(safe_plane.contains, grid))
+            # if len(safe_points) == 0:
+            #     # no safe points
+            #     continue
+            # grid = geometry.MultiPoint(safe_points)
+
+
             if stability:
                 # only consider points that are stable
                 # + only consider the relevant `stack`

@@ -5,6 +5,7 @@ import os
 import json
 import pprint
 import argparse
+import collections
 import numpy as np
 from pyquaternion import Quaternion
 
@@ -15,10 +16,9 @@ from scenes.block_scene import BlockScene
 from scenes.physics import TowerTester
 from utils.json_encoders import TowerEncoder
 
-materials = {
-    'wood' : 0.8,
-    'iron' : 0.2
-}
+materials = collections.OrderedDict(
+    [('wood', 0.8),
+     ('iron', 0.2)])
 
 def main():
     parser = argparse.ArgumentParser(description = ('Tests `SimpleBuilder` '+\
@@ -47,19 +47,19 @@ def main():
 
     tower_json = repr(new_tower)
 
-    pprint.pprint(json.loads(repr(new_tower)))
-    # pprint.pprint(tower_json)
-    # print(pprint.pprint(json.loads(json.dumps(tower_json, cls=TowerEncoder))))
-    # json_io = io.BytesIO(json.dumps(tower_json))
+    pprint.pprint(json.loads(tower_json))
 
-    scene = BlockScene(tower_json)
+    tester = TowerTester(json.loads(tower_json), materials)
+    mat_tower, results = tester()
+
+    pprint.pprint(results)
+
+    pprint.pprint(mat_tower)
+    scene = BlockScene(mat_tower)
     img_out = os.path.join(args.out, 'test_render')
-    scene.render(img_out, [1])
+    scene.render(img_out, [1], resolution = (512, 256))
     scene_out = os.path.join(args.out, 'test_scene.blend')
     scene.save(scene_out)
-
-    del scene
-    tester = TowerTester(json.loads(repr(new_tower), materials)
-
+    # scene.render(img_out, [1], resolution = (1080, 720))
 if __name__ == '__main__':
     main()
