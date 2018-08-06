@@ -56,7 +56,7 @@ def main():
 
     scene = BlockScene(tower_json)
     img_out = os.path.join(args.out, 'test_render')
-    # scene.render(img_out, [1])
+    scene.render(img_out, [1])
     scene_out = os.path.join(args.out, 'test_scene.blend')
     scene.save(scene_out)
 

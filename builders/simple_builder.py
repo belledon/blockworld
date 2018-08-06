@@ -103,6 +103,7 @@ class SimpleBuilder(Builder):
         positions = []
         parents = []
 
+        # Each z-normal surface currently available on the tower
         tower_surface = tower.available_surface()
         zs = [cs[0,2] for _,cs in tower_surface]
 
@@ -121,17 +122,7 @@ class SimpleBuilder(Builder):
             grid = self.make_grid(bbox)
             plane = surface_planes[row]
 
-            # skim off any points near the edge
-            safe_plane = affinity.scale(plane, 0.99, 0.99)
-            safe_points = list(filter(safe_plane.contains, grid))
-            if len(safe_points) == 0:
-                # no safe points
-                continue
-
-            safe_grid = geometry.MultiPoint(safe_points)
-
             if stability:
-
                 # only consider points that are stable
                 # + only consider the relevant `stack`
                 lower_blocks = tower.get_stack(parent)
@@ -147,37 +138,32 @@ class SimpleBuilder(Builder):
                     grid = geometry.MultiPoint(lower_filter)
 
 
-
             # remove points already used by higher planes
             for pr, higher_plane in enumerate(surface_planes):
 
-                if (z_bound < (zs[pr] )) and pr != row:
-                    # ignore if higher planes don't intersect along z
+                if (z_bound < zs[pr]) or (zs[pr] < z) or (pr == row):
+                    # ignore if planes don't intersect along z
                     continue
 
                 p_bounds = higher_plane.bounds
                 ddx = 1 + dx / (p_bounds[2] - p_bounds[0])
                 ddy = 1 + dy / (p_bounds[3] - p_bounds[1])
-                hp_scaled = affinity.scale(higher_plane, ddx, ddy, origin ='centroid')
-                print('bounds', hp_scaled.bounds, higher_plane.bounds)
-                hp_filter_f = lambda p : not hp_scaled.contains(p)
+                hp_scaled = affinity.scale(higher_plane, ddx, ddy)
+                hp_filter_f = lambda p : not p.within(hp_scaled)
                 hp_filter = list(filter(hp_filter_f, grid))
                 if len(hp_filter) == 0:
+                    grid = []
                     break
-                np.set_printoptions(suppress=True)
-                # print(np.vstack([p.coords for p in hp_filter]))
                 grid = geometry.MultiPoint(hp_filter)
 
-
+            # store valid points and associated parent ids
             if len(grid) > 0:
-                # store good points and associated parent ids
                 passed = np.empty((len(grid), 3))
                 passed[:,:2] = np.vstack([p.coords for p in grid])
                 passed[:,2] = z
 
                 positions += passed.tolist()
                 parents += np.repeat(parent, len(grid)).tolist()
-
 
         parents = np.array(parents).flatten()
         return zip(parents, positions)
@@ -210,7 +196,6 @@ class SimpleBuilder(Builder):
                 print('Could not place any more blocks')
                 break
             parent, pos = valids[np.random.choice(len(valids))]
-            print(ib+1, pos)
             t_tower = t_tower.place_block(block, parent, pos)
 
         return t_tower
