@@ -79,6 +79,7 @@ class TowerTester:
 
     def movement(self, positions, eps = 1E-3):
         vel = np.abs((positions[-1] - positions[0]) / len(positions))
+        print(np.mean(np.round(vel, 3)))
         return np.mean(np.round(vel, 3)) > eps
 
     #-------------------------------------------------------------------------#

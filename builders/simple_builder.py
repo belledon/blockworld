@@ -177,8 +177,9 @@ class SimpleBuilder(Builder):
 
             # store valid points and associated parent ids
             if len(grid) > 0:
+                coords = np.round(np.vstack([p.coords for p in grid]), 1)
                 passed = np.empty((len(grid), 3))
-                passed[:,:2] = np.vstack([p.coords for p in grid])
+                passed[:,:2] = coords
                 passed[:,2] = z
 
                 positions += passed.tolist()

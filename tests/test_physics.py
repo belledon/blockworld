@@ -52,12 +52,12 @@ def main():
     tester = TowerTester(json.loads(tower_json), materials)
     mat_tower, results = tester()
 
+    pprint.pprint(mat_tower)
     pprint.pprint(results)
 
-    pprint.pprint(mat_tower)
     scene = BlockScene(mat_tower)
     img_out = os.path.join(args.out, 'test_render')
-    scene.render(img_out, [1], resolution = (512, 256))
+    # scene.render(img_out, [1,9], resolution = (256, 256))
     scene_out = os.path.join(args.out, 'test_scene.blend')
     scene.save(scene_out)
     # scene.render(img_out, [1], resolution = (1080, 720))

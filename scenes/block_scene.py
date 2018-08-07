@@ -34,7 +34,7 @@ class BlockScene:
         rendering. Sets the total number of bakes frames to `frames` + `warmup`
     '''
 
-    def __init__(self, scene_json, frames = 1, warmup = 3, override={},
+    def __init__(self, scene_json, frames = 1, warmup = 2, override={},
                  wire_frame = False):
 
         # Initialize attributes
@@ -134,6 +134,8 @@ class BlockScene:
 
         ob.active_material = bpy.data.materials[mat]
         bpy.ops.rigidbody.objects_add(type='ACTIVE')
+        ob.rigid_body.use_margin = 1
+        ob.rigid_body.collision_margin = 0.0
         ob.rigid_body.mass = mass
         ob.rigid_body.friction = friction
         phys_objs = self.phys_objs
@@ -145,18 +147,20 @@ class BlockScene:
         Creates the table on which the blocks will stand.
         """
         bpy.ops.mesh.primitive_cylinder_add(
-            location=pos,
+            location = pos,
             view_align=False,
             enter_editmode=False)
         ob = bpy.context.object
         ob.name = 'base'
         ob.show_name = False
-        me = ob.data
-        me.name = '{}_Mesh'.format('base')
+        ob.data.name = '{}_Mesh'.format('base')
         self.scale_obj(ob, (10, 10, 1))
         self.set_appearance('base', 'Marble')
         bpy.ops.rigidbody.object_add(type='PASSIVE')
         bpy.ops.rigidbody.constraint_add(type='FIXED')
+        # Set to deal with issues like jittering
+        ob.rigid_body.use_margin = 1
+        ob.rigid_body.collision_margin = 0.0
 
     def set_block(self, stack):
         """
@@ -172,8 +176,6 @@ class BlockScene:
         if isinstance(scene_dict, str):
             scene_dict = json.loads(scene_dict)
 
-        print('Loading scene:')
-
         if not scene_dict['directed']:
             raise ValueError('Improperly formated json')
 
@@ -181,19 +183,6 @@ class BlockScene:
 
         for block in scene_dict['nodes']:
             self.set_block(block)
-
-    def init_lighting(self, strength = 1., color = (1.,1.,1.)):
-        scene = bpy.context.scene
-        # Create new lamp datablock
-        lamp_data = bpy.data.lamps.new(name="New Lamp", type='POINT')
-        lamp_data.node_tree.nodes['Emission'].inputs['Strength'].default_value = 10
-        # Create new object with our lamp datablock
-        lamp_object = bpy.data.objects.new(name="New Lamp", object_data=lamp_data)
-        # Link lamp object to the scene so it'll appear in this scene
-        scene.objects.link(lamp_object)
-        # Place lamp to a specified location
-        lamp_object.location = (0.0, 0.0, 9.0)
-
 
     def set_rendering_params(self, resolution):
         bpy.context.scene.render.fps = 60
@@ -210,7 +199,7 @@ class BlockScene:
         bpy.context.scene.rigidbody_world.point_cache.frame_end = bpy.context.scene.frame_end
         bpy.context.scene.rigidbody_world.solver_iterations = 100
         bpy.context.scene.rigidbody_world.steps_per_second = 240
-        bpy.context.scene.rigidbody_world.time_scale = 10
+        bpy.context.scene.rigidbody_world.time_scale = 1
         bpy.context.scene.rigidbody_world.use_split_impulse = 1
 
         # https://blender.stackexchange.com/questions/35621/setting-overriding-context-for-rigid-body-bake
@@ -271,7 +260,6 @@ class BlockScene:
                     obj.hide_render = True
 
         for frame in frames:
-
             out = "{!s}_{:d}".format(output_name, frame)
             bpy.context.scene.render.filepath = out
             bpy.context.scene.frame_set(frame + self.warmup)
