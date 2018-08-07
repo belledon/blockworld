@@ -8,25 +8,6 @@ from shapely.prepared import prep
 from utils import math_2d
 from builders.builder import Builder
 
-# import matplotlib as mpl
-# mpl.use('Agg')
-from matplotlib.collections import PatchCollection
-from matplotlib.patches import Circle, Wedge, Polygon
-import matplotlib.pyplot as plt
-
-
-def plot_coords(ax, ob):
-    # x, y = ob.xy
-    print(np.array(list(ob.coords)).shape)
-    # xy = np.array(list(ob.xy))
-    pgon = Polygon(np.array(list(ob.coords)))
-    p = PatchCollection([pgon], alpha=0.4)
-    colors = 100*np.random.rand(1)
-    p.set_array(np.array(colors))
-    ax.add_collection(p)
-    # ax.plot(x, y, 'o', color='#999999', zorder=1)
-
-
 
 class SimpleBuilder(Builder):
 
