@@ -82,7 +82,7 @@ class SimpleBuilder(Builder):
         return geometry.MultiPoint(grid)
 
 
-    def find_placement(self, tower, block_dims, stability = True):
+    def find_placement(self, tower, block_dims, stability):
         """
         Enumerates the geometrically valid positions for
         a block surface on a tower surface.
@@ -188,17 +188,17 @@ class SimpleBuilder(Builder):
         parents = np.array(parents).flatten()
         return zip(parents, positions)
 
-    def valid_placements(self, tower, block):
+    def valid_placements(self, tower, block, stability):
         """
         Finds suitable placements for a block on a tower.
         """
         surface = block.surface()
         block_dims = np.max(surface, axis = 0) - np.min(surface, axis = 0)
         block_dims[2] = surface[0, 2]
-        placements = self.find_placement(tower, block_dims)
+        placements = self.find_placement(tower, block_dims, stability)
         return list(placements)
 
-    def __call__(self, base_tower, block):
+    def __call__(self, base_tower, block, stability = True):
         """
         Builds a tower ontop of the given base.
 
@@ -211,7 +211,7 @@ class SimpleBuilder(Builder):
             if t_tower.height >= self.max_height:
                 break
 
-            valids = self.valid_placements(t_tower, block)
+            valids = self.valid_placements(t_tower, block, stability)
             if len(valids) == 0:
                 print('Could not place any more blocks')
                 break

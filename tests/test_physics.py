@@ -29,6 +29,8 @@ def main():
                         help = 'Number of blocks.')
     parser.add_argument('--height', type = float, default = 10,
                         help = 'Height of the tower.')
+    parser.add_argument('--global_s', type = int, default = 1,
+                        help = 'Global stability (default 1).')
 
     args = parser.parse_args()
 
@@ -43,7 +45,7 @@ def main():
     max_height = args.height
     builder = SimpleBuilder(max_blocks, max_height)
 
-    new_tower = builder(empty_tower, block)
+    new_tower = builder(empty_tower, block, args.global_s)
 
     tower_json = repr(new_tower)
 
@@ -57,7 +59,7 @@ def main():
 
     scene = BlockScene(mat_tower)
     img_out = os.path.join(args.out, 'test_render')
-    # scene.render(img_out, [1,9], resolution = (256, 256))
+    # scene.render(img_out, [9], resolution = (1080, 720))
     scene_out = os.path.join(args.out, 'test_scene.blend')
     scene.save(scene_out)
     # scene.render(img_out, [1], resolution = (1080, 720))
