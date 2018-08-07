@@ -77,9 +77,9 @@ class TowerTester:
         trace = scene.get_trace(frames = [0, 10])
         return [t['position'] for t in trace]
 
-    def movement(self, positions, eps = 1E-4):
-        vel = (positions[-1] - positions[0]) / len(positions)
-        return np.sum(np.abs(vel)) > eps
+    def movement(self, positions, eps = 1E-3):
+        vel = np.abs((positions[-1] - positions[0]) / len(positions))
+        return np.mean(np.round(vel, 3)) > eps
 
     #-------------------------------------------------------------------------#
 
