@@ -1,3 +1,4 @@
+import numpy as np
 from pyquaternion import Quaternion
 
 from blocks.block import Block
@@ -25,14 +26,14 @@ class SimpleBlock(Block):
         return self._dims
 
     @dimensions.setter
-    def dimensions(self, ds)
+    def dimensions(self, ds):
         if len(ds) != 3:
             msg = 'Dimensions of length {0:d} not accepted'.format(len(ds))
             raise ValueError(msg)
 
         ds = np.array(ds)
+        self.mat = ds
         self._dims = ds
-        self._mat = ds
 
     @property
     def mat(self):
@@ -53,47 +54,39 @@ class SimpleBlock(Block):
         return self._orientation
 
     @orientation.setter
-    def orientation(self, or):
-        if len(or) != 4:
+    def orientation(self, rot):
+        if len(rot) != 4:
             msg = 'Dimensions of orientation are not valid. Expected 4.'
             raise ValueError(msg)
 
-        self._orientation = Quaternion(orientation)
+        self._orientation = Quaternion(rot)
 
     # Methods #
 
-    def surface(self, top = True):
+    def surface(self, orientation = Quaternion()):
         """
         Returns the surface plane.
 
         Defaults to the top surface along the z-axis.
         """
+        # orient matrix
         mat = self.mat
-        rotated = self.orientation.rotate(mat)
+        rotated = np.array([orientation.rotate(m) for m in mat])
 
         # find the top surface
         order = np.argsort(rotated[:, 2])
         corners = rotated[order[-4:]]
 
-        # correct z axis
-        delta = np.array([0, 0, abs(corners[0,2])])
-        if not top:
-            delta = delta * -1.0
-
-        corners = corners + delta
-
-        t = np.sort(corners, axis =0)
-        t = np.sort(t, axis = 1)
-        xs = np.arange(t[0,0], t[2,0] + 0.25, 0.25)
-        ys = np.arange(t[0,1], t[1,1] + 0.25, 0.25)
-        zs = np.repeat(t[0,2], len(xs))
-        surface = np.array(np.meshgrid(xs, ys, zs)).T
-        return surface.reshape(-1, 3)
+        return corners
 
 
     def serialize(self):
         """
         Serializes the attributes of the block to `dict`.
         """
-        d = {'dims' = self.dims}
+        d = dict(dims = self.dimensions.tolist())
         return d
+
+    def __repr__(self):
+        return repr(self.serialize())
+

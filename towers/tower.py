@@ -1,5 +1,4 @@
-import networkx as nx
-from abstract import ABC
+from abc import ABC, abstractmethod
 
 class Tower(ABC):
 
@@ -16,7 +15,7 @@ class Tower(ABC):
     Parent/child relationships describe the building process where the
     parent is the block on which the child was placed.
 
-    Neighbors are simply unintend, adjacent (touching) blocks. 
+    Neighbors are simply unintend, adjacent (touching) blocks.
 
     Attributes:
         base_dimensions (tuple(float)): The dimensions of the base.
@@ -36,10 +35,10 @@ class Tower(ABC):
     def blocks(self):
         pass
 
-    # @property
-    # @abstractmethod
-    # def height(self):
-    #     pass
+    @property
+    @abstractmethod
+    def height(self):
+        pass
 
 
     # Methods #
@@ -58,12 +57,12 @@ class Tower(ABC):
         """
         pass
 
-    @abstractmethod
-    def is_stable(self):
-        """
-        Evaluates the stability of the tower (if collapses).
-        """
-        pass
+    # @abstractmethod
+    # def is_stable(self):
+    #     """
+    #     Evaluates the stability of the tower (if collapses).
+    #     """
+    #     pass
 
     @abstractmethod
     def serialize(self):

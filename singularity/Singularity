@@ -1,0 +1,20 @@
+bootstrap: shub
+from: belledon/blender_sing:latest
+
+
+%post
+  apt-get update
+  apt-get install -y python3-tk
+  pip3 install numpy \
+               scipy \
+               pandas \
+               joblib \
+               h5py \
+               pillow \
+               matplotlib \
+               SQLAlchemy \
+               pydot pyyaml networkx \
+               pyquaternion \
+               shapely
+
+  pip3 install --upgrade numpy
