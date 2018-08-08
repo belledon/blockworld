@@ -25,7 +25,7 @@ class SimpleTower(Tower):
 
     @property
     def base_dimensions(self):
-        return self.blocks['base']['dims']
+        return self.blocks[0]['dims']
 
     @property
     def blocks(self):
@@ -93,14 +93,18 @@ class SimpleTower(Tower):
             adjusted = block.surface() + block_node['position']
             surfaces.append(adjusted)
 
-        # sort by height (max -> min)
-        if len(surfaces) > 1:
-            zs = np.array([s[0,2] for s in surfaces])
-            order = np.argsort(zs)[::-1]
-            surfaces = np.array(surfaces)[order]
-            block_ids = np.array(block_ids)[order]
+        zs = [s[0,2] for s in surfaces]
+        layers = np.unique(zs)
+        data = [
+            (l, [(i,s) for i,s in zip(block_ids, surfaces) if s[0,2] == l])
+                    for l in layers]
 
-        return list(zip(block_ids, surfaces))
+            # block_ids = [[s for s in surfaces if s[0,2] == l] for l in layers]
+            # surfaces = np.array(surfaces)[order]
+            # block_ids = np.array(block_ids)[order]
+
+        # return list(zip(block_ids, surfaces))
+        return data
 
     def place_block(self, block, parent, position):
         """

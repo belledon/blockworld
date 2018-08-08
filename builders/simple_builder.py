@@ -84,77 +84,32 @@ class SimpleBuilder(Builder):
         positions = []
         parents = []
 
+        # The base of the tower
+        base_grid = self.make_grid(tower.base)
         # Each z-normal surface currently available on the tower
-        tower_surface = tower.available_surface()
-        zs = [cs[0,2] for _,cs in tower_surface]
+        tower_layers = tower.available_surface()
 
-        bounds = [np.hstack(
-            (np.min(cs[:,:2],axis=0), np.max(cs[:,:2],axis=0)))
-                  for _,cs in tower_surface]
-        surface_planes = [geometry.box(*bs) for bs in bounds]
+        for (layer_z, blocks) in tower_surface:
 
+            block_ids, block_geos = zip(*blocks)
 
-        for row, (parent, _) in enumerate(tower_surface):
-            # only consider x-y plane
-            bbox = bounds[row]
-            z = zs[row]
-            z_bound = z + block_z
+            # defining the layer
+            block_z_surfaces = [b.surface[0] for b in block_geos]
+            layer = functools.reduce(lambda x,y : x.union(y), block_z_surfaces)
 
-            grid = self.make_grid(bbox)
-            plane = surface_planes[row]
+            proposals = [propose_placement(p, layer_z)]
 
-            # bound to points within the base boundary
-            base_boundary = affinity.scale(surface_planes[-1], 1.5, 1.5)
-            safe_plane = affinity.scale(plane, 0.95, 0.95)
-            safe_points = list(filter(safe_plane.contains, grid))
-            if len(safe_points) == 0:
-                # no safe points
-                continue
-            grid = geometry.MultiPoint(safe_points)
+            locally_stable_f = lambda p : local_stability(p, layer)
+            locally_stable = filter(locally_stable_f, proposals)
 
-            # skim off any points near the edge
-            safe_plane = affinity.scale(plane, 0.95, 0.95)
-            safe_points = list(filter(safe_plane.contains, grid))
-            if len(safe_points) == 0:
-                # no safe points
-                continue
-            grid = geometry.MultiPoint(safe_points)
+            collision_f = lambda p : not any(
+                map(lambda b : collides(p, b), all_blocks))
 
 
-            if stability:
-                # only consider points that are stable
-                # + only consider the relevant `stack`
-                lower_blocks = tower.get_stack(parent)
-                lower_surfaces = tower.available_surface(lower_blocks)
-                for l_block, l_surface in zip(lower_blocks, lower_surfaces):
-                    _, lower_surface = l_surface
-                    lp_bb = np.hstack((np.min(lower_surface[:,:2],axis=0),
-                                       np.max(lower_surface[:,:2],axis=0)))
-                    lower_plane = geometry.box(*lp_bb)
-                    lower_filter = list(filter(lower_plane.contains, grid))
-                    if len(lower_filter) == 0:
-                        grid = []
-                        break
-                    grid = geometry.MultiPoint(lower_filter)
 
 
-            # remove points already used by higher planes
-            for pr, higher_plane in enumerate(surface_planes):
 
-                if (z_bound < zs[pr]) or (zs[pr] < z) or (pr == row):
-                    # ignore if planes don't intersect along z
-                    continue
 
-                p_bounds = higher_plane.bounds
-                ddx = 1 + dx / (p_bounds[2] - p_bounds[0])
-                ddy = 1 + dy / (p_bounds[3] - p_bounds[1])
-                hp_scaled = affinity.scale(higher_plane, ddx, ddy)
-                hp_filter_f = lambda p : not p.within(hp_scaled)
-                hp_filter = list(filter(hp_filter_f, grid))
-                if len(hp_filter) == 0:
-                    grid = []
-                    break
-                grid = geometry.MultiPoint(hp_filter)
 
             # store valid points and associated parent ids
             if len(grid) > 0:
