@@ -140,7 +140,8 @@ class SimpleTower(Tower):
         d = dict(source='source', target='target', name='id',
                  key='key', link='links', block = 'block',
                  position='position',  orienatation='orienatation')
-        return nx.node_link_data(g, attrs=d)
+        data = nx.node_link_data(g, attrs=d)
+        return json.loads(json.dumps(data, cls = TowerEncoder))
 
     def __repr__(self):
-        return json.dumps(self.serialize(), cls = TowerEncoder)
+        return json.dumps(self.serialize())

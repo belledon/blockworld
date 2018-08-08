@@ -23,7 +23,7 @@ class SimpleBuilder(Builder):
 
     """
 
-    def __init__(self, max_blocks, max_height):
+    def __init__(self, max_blocks, max_height = 100):
         self.max_blocks = max_blocks
         self.max_height = max_height
 
@@ -179,7 +179,7 @@ class SimpleBuilder(Builder):
         placements = self.find_placement(tower, block_dims, stability)
         return list(placements)
 
-    def __call__(self, base_tower, block, stability = True):
+    def __call__(self, base_tower, blocks, stability = True):
         """
         Builds a tower ontop of the given base.
 
@@ -188,7 +188,7 @@ class SimpleBuilder(Builder):
 
         t_tower = copy.deepcopy(base_tower)
 
-        for ib in range(self.max_blocks):
+        for ib, block in enumerate(blocks):
             if t_tower.height >= self.max_height:
                 break
 
