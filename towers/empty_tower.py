@@ -3,7 +3,7 @@ import networkx as nx
 from pyquaternion import Quaternion
 
 from towers.simple_tower import SimpleTower
-from blocks.base_block import BaseBlock
+from blocks.simple_block import SimpleBlock
 
 class EmptyTower(SimpleTower):
 
@@ -23,8 +23,12 @@ class EmptyTower(SimpleTower):
     # Properties #
 
     @property
+    def base(self):
+        return self.blocks[0]['block']
+
+    @property
     def base_dimensions(self):
-        return self.blocks['base']['dims']
+        return self.base.dimensions
 
     @base_dimensions.setter
     def base_dimensions(self, ds):
@@ -33,32 +37,20 @@ class EmptyTower(SimpleTower):
             msg = 'Dimensions of length {0:d} not accepted'.format(len(ds))
             raise ValueError(msg)
 
-        ds = np.array(ds)
+        ds = np.array(list(ds) + [1,])
         g = nx.DiGraph()
-        base = BaseBlock(ds)
-        g.add_node(0, block = base, position = [0, 0, -0.5],
-                   orientation = Quaternion())
-        self._blocks = g
+        base = SimpleBlock(ds, pos = [0, 0, -0.5])
+        g.add_node(0, block = base)
+        self._graph = g
 
     @property
     def height(self):
-        return 0
+        return self.base.mat[0, 2]
 
     # Methods #
-
-    # def available_surface(self):
+    # def levels(self, block_ids = None):
     #     """
     #     Returns surface maps valid for block placement.
-
-    #     Empty towers return their base as a flat surface.
     #     """
-    #     g = self.blocks
-    #     surface = g.nodes['base']['block'].surface()
-    #     return [('base', surface)]
-
-
-    def is_stable(self):
-        """
-        An empty tower is always considered stable.
-        """
-        return True
+    #     data = [(self.base.mat[0,2], [(0, self.base)])]
+    #     return ([self.base], data)

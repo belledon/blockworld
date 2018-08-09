@@ -1,11 +1,12 @@
 import copy
 import pprint
+import functools
 import numpy as np
-from scipy.spatial import ConvexHull
-from shapely import geometry, affinity
-from shapely.prepared import prep
 
-from utils import math_2d
+from shapely import geometry, affinity
+# from shapely.prepared import prep
+
+from utils import math_2d, geotools
 from builders.builder import Builder
 
 
@@ -56,14 +57,9 @@ class SimpleBuilder(Builder):
 
     # Methods #
 
-    def make_grid(self, bbox, step = 0.1):
-        xs = np.arange(bbox[0], bbox[2] + step, step)
-        ys = np.arange(bbox[1], bbox[3] + step, step)
-        grid = np.array(np.meshgrid(xs, ys)).T.reshape(-1, 2)
-        return geometry.MultiPoint(grid)
 
 
-    def find_placement(self, tower, block_dims, stability):
+    def find_placements(self, tower, block):
         """
         Enumerates the geometrically valid positions for
         a block surface on a tower surface.
@@ -79,61 +75,52 @@ class SimpleBuilder(Builder):
         The tower surfaces are expected to be sorted along the
         z-axis.
         """
-        dx,dy,_ = block_dims
-        block_z = block_dims[2] * 2
         positions = []
         parents = []
 
         # The base of the tower
-        base_grid = self.make_grid(tower.base)
+        base_grid = geotools.make_grid(tower.base)
+        all_blocks, levels = tower.levels()
         # Each z-normal surface currently available on the tower
-        tower_layers = tower.available_surface()
+        for (level_z, level_blocks) in levels:
 
-        for (layer_z, blocks) in tower_surface:
-
-            block_ids, block_geos = zip(*blocks)
-
+            block_ids, blocks = zip(*level_blocks)
             # defining the layer
-            block_z_surfaces = [b.surface[0] for b in block_geos]
+            block_z_surfaces = [b.surface for b in blocks]
+            # [P] -> P
             layer = functools.reduce(lambda x,y : x.union(y), block_z_surfaces)
+            grid = base_grid.intersection(layer)
+            proposals = geotools.propose_placements(block, grid, level_z)
+            
+            print('z', level_z)
+            print('n prop', len(proposals))
+            if isinstance(layer, geometry.Polygon):
+                locally_stable = proposals
+            else:
+                locally_stable_f = lambda p : geotools.local_stability(p, layer)
+                locally_stable = list(filter(locally_stable_f, proposals))
 
-            proposals = [propose_placement(p, layer_z)]
+            print('stable', len(locally_stable))
 
-            locally_stable_f = lambda p : local_stability(p, layer)
-            locally_stable = filter(locally_stable_f, proposals)
+            # collision_f = lambda p : all(
+            #     map(lambda b : not p.collides(b), all_blocks))
+            # no_collision = list(filter(collision_f, locally_stable))
+            print(len(all_blocks))
+            no_collision = [p for p in locally_stable \
+                            if not any([p.collides(b) for b in all_blocks])]
 
-            collision_f = lambda p : not any(
-                map(lambda b : b.overlaps(p), all_blocks))
-            no_collision = filter(collision_f, proposals)
+            print('no collision', len(no_collision))
+            # Deciding whether to use a DAG or just blocks and points
+            # level_parents = [filter(lambda i,b : pot.isparent(b), blocks)
+            #            for pot in no_collision]
+            level_parents = [[i for i,b in level_blocks if pot.isparent(b)]
+                             for pot in no_collision]
 
+            positions.extend(no_collision)
+            parents.extend(level_parents)
 
-
-
-
-
-
-            # store valid points and associated parent ids
-            if len(grid) > 0:
-                coords = np.round(np.vstack([p.coords for p in grid]), 1)
-                passed = np.empty((len(grid), 3))
-                passed[:,:2] = coords
-                passed[:,2] = z
-
-                positions += passed.tolist()
-                parents += np.repeat(parent, len(grid)).tolist()
-
-        parents = np.array(parents).flatten()
         return zip(parents, positions)
 
-    def valid_placements(self, tower, block, stability):
-        """
-        Finds suitable placements for a block on a tower.
-        """
-        surface = block.surface()
-        block_dims = np.max(surface, axis = 0) - np.min(surface, axis = 0)
-        block_dims[2] = surface[0, 2]
-        placements = self.find_placement(tower, block_dims, stability)
-        return list(placements)
 
     def __call__(self, base_tower, blocks, stability = True):
         """
@@ -148,11 +135,12 @@ class SimpleBuilder(Builder):
             if t_tower.height >= self.max_height:
                 break
 
-            valids = self.valid_placements(t_tower, block, stability)
+            print('BLOCK', ib)
+            valids = list(self.find_placements(t_tower, block))
             if len(valids) == 0:
                 print('Could not place any more blocks')
                 break
-            parent, pos = valids[np.random.choice(len(valids))]
-            t_tower = t_tower.place_block(block, parent, pos)
+            parents, b = valids[np.random.choice(len(valids))]
+            t_tower = t_tower.place_block(b, parents)
 
         return t_tower

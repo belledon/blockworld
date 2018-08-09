@@ -24,11 +24,6 @@ class Block(ABC):
 
     @property
     @abstractmethod
-    def orientation(self):
-        pass
-
-    @property
-    @abstractmethod
     def mat(self):
         pass
 

@@ -16,13 +16,13 @@ def main():
     parser.add_argument('out', type = str, help = 'Path to save render.')
     parser.add_argument('--number', type = int, default = 10,
                         help = 'Number of blocks.')
-    parser.add_argument('--stability', type = str, default = 'global',
+    parser.add_argument('--stability', type = str, default = 'local',
                         choices = ['local', 'glocal'],
                         help = 'Height of the tower.')
 
     args = parser.parse_args()
 
-    base = (2,2)
+    base = (2,1)
     materials = {'Wood' : 0.5,
                  'Metal': 0.5}
 

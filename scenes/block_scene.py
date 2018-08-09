@@ -109,7 +109,7 @@ class BlockScene:
         Initializes a block object.
         """
         block = object_d['block']
-        bpy.ops.mesh.primitive_cube_add(location=object_d['position'],
+        bpy.ops.mesh.primitive_cube_add(location=block['pos'],
                                         view_align=False,
                                         enter_editmode=False)
         ob = bpy.context.object
@@ -142,12 +142,12 @@ class BlockScene:
         phys_objs.append(object_d['id'])
         self.phys_objs = phys_objs
 
-    def set_base(self, dimensions, pos):
+    def set_base(self, block):
         """
         Creates the table on which the blocks will stand.
         """
         bpy.ops.mesh.primitive_cylinder_add(
-            location = pos,
+            location = block['pos'],
             view_align=False,
             enter_editmode=False)
         ob = bpy.context.object
@@ -167,7 +167,7 @@ class BlockScene:
         Initializes blocks described in the stack.
         """
         if stack['id'] == 0:
-            self.set_base(stack['block']['dims'], stack['position'])
+            self.set_base(stack['block'])
         else:
             self.create_block(stack)
 
