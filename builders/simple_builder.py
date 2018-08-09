@@ -103,7 +103,8 @@ class SimpleBuilder(Builder):
             locally_stable = filter(locally_stable_f, proposals)
 
             collision_f = lambda p : not any(
-                map(lambda b : collides(p, b), all_blocks))
+                map(lambda b : b.overlaps(p), all_blocks))
+            no_collision = filter(collision_f, proposals)
 
 
 
