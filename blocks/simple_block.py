@@ -95,15 +95,14 @@ class SimpleBlock(Block):
         if not isinstance(other, Block):
             raise ValueError('Other must be `Block`')
 
-        planes = self.surface.overlaps(other.surface)
+        planes = self.surface.intersects(other.surface) and \
+                 (not self.surface.touches(other.surface))
+
         t_f = lambda a,b : ((b[0] >= a[0]) and (b[0] < a[1])) or \
             (b[1] <= a[1] and b[1] > a[0])
         zs = t_f(self.mat[(-1, 0), 2], other.mat[(-1, 0), 2]) or \
              t_f(other.mat[(-1, 0), 2], self.mat[(-1, 0), 2])
-        print(planes, zs, self.mat[(-1, 0), 2], other.mat[(-1, 0), 2], self.pos)
         return planes and zs
-    
-
 
     def isparent(self, other):
         """
@@ -111,7 +110,9 @@ class SimpleBlock(Block):
         """
         if not isinstance(other, Block):
             raise ValueError('Other must be `Block`')
-        planes = self.surface.touches(other.surface)
+        planes = self.surface.intersects(other.surface) and \
+                 (not self.surface.touches(other.surface))
+
         zs = np.isclose(other.mat[0,2], self.mat[-1, 2])
         return planes and zs
 
