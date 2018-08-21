@@ -37,8 +37,9 @@ def main():
             json.dump(new_tower, f, indent = 4, sort_keys = True)
 
         scene = block_scene.BlockScene(tower_json)
-        img_out = os.path.join(args.out, 'test_render')
+        img_out = os.path.join(args.out, 'renders/test_render')
         # scene.render(img_out, [1])
+        scene.render_circle(img_out)
         scene_out = os.path.join(args.out, 'test_scene.blend')
         scene.save(scene_out)
 

@@ -185,6 +185,9 @@ class BlockScene:
             self.set_block(block)
 
     def set_rendering_params(self, resolution):
+        """
+        Configures various settings for rendering such as resolution.
+        """
         bpy.context.scene.render.fps = 60
         bpy.context.scene.render.resolution_x = resolution[0]
         bpy.context.scene.render.resolution_y = resolution[1]
@@ -194,14 +197,33 @@ class BlockScene:
         bpy.context.scene.render.tile_y = 16
         bpy.context.scene.render.engine = 'CYCLES'
 
-    def bake_physics(self):
+    def set_camera(self, rot):
+        """
+        Moves the camera along a circular path.
 
+        Arguments:
+            rot (float): angle in degrees along path (0, 360).
+        """
+        radius = 6.0
+        theta = rot / (2 * np.pi)
+        # Move camera to position on ring
+        xyz = [np.cos(theta) * radius, np.sin(theta) * radius, radius]
+        camera = bpy.data.objects['Camera']
+        camera.location = xyz
+        # Face camera towards point
+        loc_camera = camera.matrix_world.to_translation()
+        direction = mathutils.Vector([0,0,6]) - loc_camera
+        # point the cameras '-Z' and use its 'Y' as up
+        rot_quat = direction.to_track_quat('-Z', 'Y')
+        self.rotate_obj(camera, rot_quat)
+
+
+    def bake_physics(self):
         bpy.context.scene.rigidbody_world.point_cache.frame_end = bpy.context.scene.frame_end
         bpy.context.scene.rigidbody_world.solver_iterations = 100
         bpy.context.scene.rigidbody_world.steps_per_second = 240
         bpy.context.scene.rigidbody_world.time_scale = 1
         bpy.context.scene.rigidbody_world.use_split_impulse = 1
-
         # https://blender.stackexchange.com/questions/35621/setting-overriding-context-for-rigid-body-bake
         bpy.context.scene.update()
         for p_obj in self.phys_objs:
@@ -242,13 +264,12 @@ class BlockScene:
         return results
 
     def render(self, output_name, frames, show = [],
-               resolution = (256, 256)):
+               resolution = (256, 256), camera_rot = None):
         """
         output_name: Path to save frames
         frames: a list of frames to render (shifted by warmup)
         show: a list of object names to render
         """
-        print('rendering')
         self.set_rendering_params(resolution)
         if len(show) > 0:
 
@@ -259,12 +280,40 @@ class BlockScene:
                     obj.hide = True
                     obj.hide_render = True
 
-        for frame in frames:
-            out = "{!s}_{:d}".format(output_name, frame)
+        if camera_rot is None:
+            camera_rot = np.zeros(len(frames))
+
+        for i, (frame, cam) in enumerate(zip(frames, camera_rot)):
+            out = "{!s}_{:d}".format(output_name, i)
+            self.set_camera(cam)
             bpy.context.scene.render.filepath = out
             bpy.context.scene.frame_set(frame + self.warmup)
             bpy.context.scene.update()
             bpy.ops.render.render(write_still=True)
+
+
+    def render_circle(self, out_path, freeze = True, dur = 1,
+                      resolution = (256, 256)):
+        """
+        Renders a ring around a tower.
+
+        Arguments:
+            out_path (str): Path to save frames.
+            freeze (bool): Whether or not to run physics.
+            dur (float, optional): Duration in seconds.
+            resolution (float, optional): Resolution of render.
+        """
+        # n = dur * bpy.context.scene.render.fps
+        n = 10
+        rots = np.linspace(0, 360, n)
+        if freeze == True:
+            frames = np.repeat(0, n)
+        else:
+            frames = np.arange(n)
+
+        self.render(out_path, frames, resolution = resolution,
+                    camera_rot = rots)
+
 
     def save(self, out):
         """

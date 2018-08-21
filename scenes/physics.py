@@ -60,7 +60,6 @@ class TowerEntropy:
           - The randomly sampled congruent tower.
           - The stability results for each block in the tower.
         """
-        base_tower = self.sample_tower()
         d = [
             {'id' : 'template',
               'body' : tower,
