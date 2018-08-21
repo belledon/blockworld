@@ -212,7 +212,7 @@ class BlockScene:
         camera.location = xyz
         # Face camera towards point
         loc_camera = camera.matrix_world.to_translation()
-        direction = mathutils.Vector([0,0,6]) - loc_camera
+        direction = mathutils.Vector([0,0,1]) - loc_camera
         # point the cameras '-Z' and use its 'Y' as up
         rot_quat = direction.to_track_quat('-Z', 'Y')
         self.rotate_obj(camera, rot_quat)
