@@ -123,23 +123,40 @@ class Generator:
         return tower
 
 
+    """
+    Trying to figure out how to streamline this
+    """
     def configurations(self, tower):
         """
         Generator for different tower configurations.
         """
-        materials = extract_feature(tower['nodes'], 'material')
-        congruency = extract_feature(tower['nodes'], 'congruency')
+        blocks = tower['nodes']
+        subs = extract_feature(blocks, 'substance')
 
-        for ind in range(self.n_blocks):
-            temp_tower = copy.copy(tower)
-            blocks = temp_tower['nodes']
-            temp_con = copy.copy(congruency)
-            temp_con[ind] = False
-            yield (ind, temp_tower)
+        af = lambda m: \
+             apply_feature(
+                 apply_feature(blocks, 'substance', m),
+                 'appearance', m)
+
+        for mat_i in range(self.unknowns):
+            mt = copy.deepcopy(subs)
+            mt[0] = self.unknowns[mat_i]
+            ap = [np.roll(mt, i) for i in range(len(blocks))]
+            base = [apply_feature(blocks, 'appearance', ms) for ms in ap]
+
+            cong = [apply_feature(blocks, 'substance', ms) for ms in ap]
+
+            mti = copy.deepcopy(subs)
+            mti[0] = self.unknowns[(mat_i + 1) % len(self.unknowns)]
+            sub_inc = [np.roll(mti, i) for i in range(len(blocks))]
+            incon = [apply_feature(blocks, 'substance', ms) for ms in sub_inc]
+
+            congruent_tower = copy.deepcopy(tower)
+            congruent_tower['nodes'] = 
 
     #-------------------------------------------------------------------------#
 
-    def __call__(self, n = 1):
+    def __call__(self, n = 1, unknown = None):
         """
         Generates the given number of random towers.
 
@@ -150,6 +167,13 @@ class Generator:
           - tower (`Tower`) : The randomly sampled congruent tower.
           - configurations : A generator over incongruency for each block.
         """
+        if unknown is None:
+            u_types = np.random.choice(self.unknowns, n)
+        else:
+            if not unknown in self.unknowns:
+                raise ValueError('Unsupported unknown material')
+            u_types = np.repeat(unknown, n)
+
         for i in range(n):
             base_tower = self.sample_tower()
             yield (base_tower, self.configurations(base_tower))

@@ -120,17 +120,16 @@ class BlockScene:
         self.scale_obj(ob, block['dims'])
         ob.matrix_world.translation
 
-        if 'material' in object_d and 'congruency' in object_d:
-            cong = int(object_d['congruency'])
-            mat = self.materials[object_d['material']]
-            phys_key = not (cong ^ object_d['material'])
+        if 'appearance' in object_d and 'substance' in object_d:
+            mat = object_d['appearance']
+            phys_key = object_d['substance']
             mass = self.density[phys_key] * \
                    np.prod(block['dims'])
             friction = self.friction[phys_key]
         else:
             mat = 'Wood'
-            mass = self.density[1] * np.prod(block['dims'])
-            friction = self.friction[1]
+            mass = self.density[mat] * np.prod(block['dims'])
+            friction = self.friction[mat]
 
         ob.active_material = bpy.data.materials[mat]
         bpy.ops.rigidbody.objects_add(type='ACTIVE')
@@ -204,12 +203,13 @@ class BlockScene:
         Arguments:
             rot (float): angle in degrees along path (0, 360).
         """
-        radius = 6.0
-        theta = rot / (2 * np.pi)
+        radius = 9.0
+        theta = np.pi * (rot / 180.0)
         # Move camera to position on ring
         xyz = [np.cos(theta) * radius, np.sin(theta) * radius, radius]
         camera = bpy.data.objects['Camera']
         camera.location = xyz
+        bpy.context.scene.update()
         # Face camera towards point
         loc_camera = camera.matrix_world.to_translation()
         direction = mathutils.Vector([0,0,1]) - loc_camera
@@ -303,13 +303,12 @@ class BlockScene:
             dur (float, optional): Duration in seconds.
             resolution (float, optional): Resolution of render.
         """
-        # n = dur * bpy.context.scene.render.fps
-        n = 10
+        n = int(dur * bpy.context.scene.render.fps)
         rots = np.linspace(0, 360, n)
         if freeze == True:
-            frames = np.repeat(0, n)
+            frames = np.repeat(1, n)
         else:
-            frames = np.arange(n)
+            frames = np.arange(n) + 1
 
         self.render(out_path, frames, resolution = resolution,
                     camera_rot = rots)
