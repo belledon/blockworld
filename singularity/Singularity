@@ -4,7 +4,7 @@ from: belledon/blender_sing:latest
 
 %post
   apt-get update
-  apt-get install -y python3-tk
+  apt-get install -y python3-tk ffmpeg
   pip3 install numpy \
                scipy \
                pandas \
