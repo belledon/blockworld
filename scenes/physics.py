@@ -7,7 +7,7 @@ from . import block_scene
 class TowerEntropy:
 
     """
-    Performs "enotropy" analysis on towers.
+    Performs "entropy" analysis on towers.
     """
 
     def __init__(self, energy):

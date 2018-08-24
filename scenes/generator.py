@@ -12,6 +12,7 @@ class Generator:
     Controls generation of towers
     """
     stability_types = ['local', 'global']
+    unknowns = ['H', 'L']
     def __init__(self, base, n_blocks, materials, stability):
         self.base = base
         self.n_blocks = n_blocks
@@ -91,7 +92,7 @@ class Generator:
 
     def sample_structure(self):
         """
-        Procedurally builds on top of a `base` structure.
+        Procedurally builds on top of the given `base` tower.
         """
         base = copy.copy(self.base)
         blocks = self.sample_blocks()
@@ -104,38 +105,61 @@ class Generator:
         in a tower structure.
         """
         tower = copy.deepcopy(tower)
-        blocks = tower['nodes']
         materials = np.random.choice(self.materials,
                                      size = self.n_blocks,
                                      p = self.mat_ps)
 
-        blocks = apply_feature(blocks, 'substance', materials)
-        blocks = apply_feature(blocks, 'appearance', materials)
-        tower['nodes'] = blocks
+        tower = tower.apply_feature('substance', materials)
+        tower = tower.apply_feature('appearance', materials)
         return tower
 
     def sample_tower(self):
         """
         Procedurally generates a tower.
         """
-        struct = self.sample_structure().serialize()
-        tower = self.sample_materials(struct)
+        tower = self.sample_structure()
+        tower = self.sample_materials(tower)
         return tower
 
 
     def configurations(self, tower):
         """
         Generator for different tower configurations.
-        """
-        materials = extract_feature(tower['nodes'], 'material')
-        congruency = extract_feature(tower['nodes'], 'congruency')
 
-        for ind in range(self.n_blocks):
-            temp_tower = copy.copy(tower)
-            blocks = temp_tower['nodes']
-            temp_con = copy.copy(congruency)
-            temp_con[ind] = False
-            yield (ind, temp_tower)
+        Arguments:
+            tower (`dict`) : Serialized tower structure.
+
+        Returns:
+            A generator with the i-th iteration representing the i-th
+            block in the tower being replaced.
+
+            Each iteration contains a dictionary of tuples corresponding
+            to a tower with the replaced block having congruent or incongruent
+            substance to its appearance, organized with respect to congruent
+            material.
+
+            { 'mat_i' : (congruent, incongruent)
+              ...
+            
+        """
+        subs = tower.extract_feature('substance')
+        n_blocks = len(tower) 
+        for block_i in range(n_blocks):
+            d = {}
+            for mat_i in range(len(self.unknowns)):
+                mt = copy.deepcopy(subs)
+                mt[block_i] = self.unknowns[mat_i]
+                base = tower.apply_feature('appearance', mt)
+                cong_tower = base.apply_feature('substance', mt)
+
+                mti = copy.deepcopy(subs)
+                mti[block_i] = self.unknowns[(mat_i + 1) % len(self.unknowns)]
+                inco_tower = base.apply_feature('substance', mti)
+
+                d[self.unknowns[mat_i]] = (cong_tower, inco_tower)
+
+            yield d
+
 
     #-------------------------------------------------------------------------#
 
@@ -150,36 +174,37 @@ class Generator:
           - tower (`Tower`) : The randomly sampled congruent tower.
           - configurations : A generator over incongruency for each block.
         """
-        for i in range(n):
+        for _ in range(n):
             base_tower = self.sample_tower()
             yield (base_tower, self.configurations(base_tower))
 
 
 # Helper functions
 
-def extract_feature(blocks, feature):
-    n_blocks = len(blocks)
-    values = []
-    order = []
-    for block in blocks:
-        b_id = block['id']
-        if b_id > 0:
-            values.append(block[feature])
-            order.append(int(b_id) - 1)
-    return np.array(values)[order]
+# def extract_feature(blocks, feature):
+#     n_blocks = len(blocks)
+#     values = []
+#     order = []
+#     for block in blocks:
+#         b_id = block['id']
+#         if b_id > 0:
+#             values.append(block[feature])
+#             order.append(int(b_id) - 1)
+#     return np.array(values)[order]
 
-def apply_feature(blocks, feature, values):
-    """
-    Applys a feature to a set of blocks in a tower
-    """
-    n_blocks = len(blocks) - 1
-    n_values = len(values)
-    if n_blocks != n_values:
-        raise ValueError('Block, values missmatch')
+# def apply_feature(tower, feature, values):
+#     """
+#     Applys a feature to a set of blocks in a tower
+#     """
+#     tower = copy.deepcopy(tower)
+#     n_blocks = len(tower)
+#     n_values = len(values)
+#     if n_blocks != n_values:
+#         raise ValueError('Block, values missmatch')
 
-    for block in blocks:
-        b_id = block['id']
-        if b_id > 0:
-            block[feature] = values[int(b_id) - 1]
+#     for b_id, block in enumerate(tower.blocks):
+#         if b_id == 0:
+#             continue
+#         block[feature] = values[b_id]
 
-    return blocks
+#     return tower
