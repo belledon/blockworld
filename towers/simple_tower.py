@@ -33,7 +33,7 @@ class SimpleTower(Tower):
 
     @property
     def blocks(self):
-        return copy.deepcopy(self.graph.nodes)
+        return self.graph.nodes
 
     @property
     def graph(self):
@@ -133,3 +133,26 @@ class SimpleTower(Tower):
 
     def __repr__(self):
         return json.dumps(self.serialize())
+
+    def apply_feature(self, feature, values):
+        """
+        Applys a feature to a set of blocks in a tower
+        """
+        n_blocks = len(self)
+        n_values = len(values)
+        if n_blocks != n_values:
+            raise ValueError('Block, values missmatch')
+
+        tower = copy.deepcopy(self)
+        for b_id in np.arange(n_blocks):
+            tower.blocks[b_id + 1][feature] = values[b_id]
+
+        return tower
+
+    def extract_feature(self, feature):
+        n_blocks = len(self)
+        values = []
+        tower = copy.deepcopy(self)
+        for b_id in np.arange(n_blocks):
+            values.append(tower.blocks[b_id+1][feature])
+        return np.array(values)
