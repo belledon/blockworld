@@ -44,7 +44,7 @@ class Tower(ABC):
     # Methods #
 
     @abstractmethod
-    def available_surface(self):
+    def levels(self):
         """
         Returns surface maps valid for block placement.
         """
@@ -56,13 +56,6 @@ class Tower(ABC):
         Returns a new tower with the given blocked added.
         """
         pass
-
-    # @abstractmethod
-    # def is_stable(self):
-    #     """
-    #     Evaluates the stability of the tower (if collapses).
-    #     """
-    #     pass
 
     @abstractmethod
     def serialize(self):

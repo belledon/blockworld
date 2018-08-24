@@ -30,7 +30,7 @@ class Builder(ABC):
     # Methods #
 
     @abstractmethod
-    def valid_placements(self, tower, block):
+    def find_placements(self, tower, block):
         """
         Finds suitable placements for a block on a tower.
         """

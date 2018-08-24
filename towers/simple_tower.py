@@ -19,20 +19,28 @@ class SimpleTower(Tower):
     """
 
     def __init__(self, blocks):
-        self.blocks = blocks
+        self.graph = blocks
 
     # Properties #
 
     @property
     def base_dimensions(self):
-        return self.blocks['base']['dims']
+        return self.base.dimensions
+
+    @property
+    def base(self):
+        return self.blocks[0]['block']
 
     @property
     def blocks(self):
-        return copy.deepcopy(self._blocks)
+        return self.graph.nodes
 
-    @blocks.setter
-    def blocks(self, blocks):
+    @property
+    def graph(self):
+        return self._graph
+
+    @graph.setter
+    def graph(self, blocks):
 
         if not isinstance(blocks, nx.DiGraph):
             msg = 'Type of given blocks is not valid.'
@@ -43,11 +51,11 @@ class SimpleTower(Tower):
             raise ValueError(msg)
 
         if len(blocks) <= 1:
-            msg = 'When trying to initialie an empty tower use '+\
+            msg = 'When trying to initialize an empty tower use '+\
                   '`towers.EmptyTower`.'
             raise ValueError(msg)
 
-        self._blocks = blocks
+        self._graph = blocks
         self.height = blocks
 
     @property
@@ -60,15 +68,11 @@ class SimpleTower(Tower):
         tops = [b for b in g if len(list(g.successors(b))) == 0]
         result = 0
         for top in tops:
-            block = g.nodes[top]
-            position = block['position']
-            surface = block['block'].surface()
-            # adjust the object-relative plane by its position in the tower
-            adjusted = (surface + position)[0,2]
-            result = max(adjusted, result)
+            block = g.nodes[top]['block']
+            result = max(block.mat[0,2], result)
 
         # used to adjust the total height
-        base_height = g.nodes[0]['block'].dimensions[2]
+        base_height = self.base.mat[0,2]
         self._height = result - base_height
 
     # Methods #
@@ -76,47 +80,32 @@ class SimpleTower(Tower):
     def __len__(self):
         return len(self.blocks) - 1
 
-    def available_surface(self, block_ids = None):
+    def levels(self, block_ids = None):
         """
         Returns surface maps valid for block placement.
         """
-        g = self.blocks
+        bs = self.blocks
         # get the top surface of each block
         if block_ids is None:
-            block_ids = list(g)
+            block_ids = list(bs)
 
-        surfaces = []
-        for b_id in block_ids:
-            block_node = g.nodes[b_id]
-            block = block_node['block']
-            # adjust the object-relative plane by its position in the tower
-            adjusted = block.surface() + block_node['position']
-            surfaces.append(adjusted)
+        blocks = [bs[b_id]['block'] for b_id in block_ids]
 
-        # sort by height (max -> min)
-        if len(surfaces) > 1:
-            zs = np.array([s[0,2] for s in surfaces])
-            order = np.argsort(zs)[::-1]
-            surfaces = np.array(surfaces)[order]
-            block_ids = np.array(block_ids)[order]
+        zs = [b.mat[0,2] for b in blocks]
+        layers = np.unique(zs)
+        tz = list(zip(block_ids, blocks, zs))
+        data = [(l, [(i,b) for i,b,z in tz if z == l]) for l in layers]
+        return blocks, data
 
-        return list(zip(block_ids, surfaces))
-
-    def place_block(self, block, parent, position):
+    def place_block(self, block, parents):
         """
         Returns a new tower with the given blocked added.
         """
-        g = self.blocks
+        g = self.graph
         b_id = len(g)
-
-        # adjust z axis by center of the object
-        surface = block.surface()
-        dz = surface[0,2]
-        position = np.add(position, [0, 0, dz])
-
-        # add node to graph
-        g.add_node(b_id, block = block, position = position)
-        g.add_edge(parent, b_id)
+        g.add_node(b_id, block = block)
+        for parent in parents:
+            g.add_edge(parent, b_id)
         new_tower = SimpleTower(g)
         return new_tower
 
@@ -124,7 +113,7 @@ class SimpleTower(Tower):
         """
         Returns the parents of this block.
         """
-        g = self.blocks
+        g = self.graph
         parents = list(nx.shortest_path(g, source = 0, target = block_id))
         return parents
 
@@ -136,11 +125,34 @@ class SimpleTower(Tower):
         return True
 
     def serialize(self):
-        g = self.blocks
+        g = self.graph
         d = dict(source='source', target='target', name='id',
-                 key='key', link='links', block = 'block',
-                 position='position',  orienatation='orienatation')
-        return nx.node_link_data(g, attrs=d)
+                 key='key', link='links', block = 'block')
+        data = nx.node_link_data(g, attrs=d)
+        return json.loads(json.dumps(data, cls = TowerEncoder))
 
     def __repr__(self):
-        return json.dumps(self.serialize(), cls = TowerEncoder)
+        return json.dumps(self.serialize())
+
+    def apply_feature(self, feature, values):
+        """
+        Applys a feature to a set of blocks in a tower
+        """
+        n_blocks = len(self)
+        n_values = len(values)
+        if n_blocks != n_values:
+            raise ValueError('Block, values missmatch')
+
+        tower = copy.deepcopy(self)
+        for b_id in np.arange(n_blocks):
+            tower.blocks[b_id + 1][feature] = values[b_id]
+
+        return tower
+
+    def extract_feature(self, feature):
+        n_blocks = len(self)
+        values = []
+        tower = copy.deepcopy(self)
+        for b_id in np.arange(n_blocks):
+            values.append(tower.blocks[b_id+1][feature])
+        return np.array(values)

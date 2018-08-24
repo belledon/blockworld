@@ -3,11 +3,11 @@ import sys
 import bpy
 import json
 import pprint
-import traceback
 import mathutils
 import numpy as np
-import mathutils
 
+
+from . import substances
 
 #################################################
 # https://stackoverflow.com/questions/28075599/opening-blend-files-using-blenders-python-api
@@ -42,9 +42,6 @@ class BlockScene:
         self.frames = frames
         self.override = override
         self.wire_frame = wire_frame
-        self.materials = ['Metal', 'Wood']
-        self.density = [5.0, 1.0]
-        self.friction = [0.2, 0.5]
         self.phys_objs = []
 
         # Clear scene
@@ -96,11 +93,12 @@ class BlockScene:
         bpy.ops.object.origin_set(type='ORIGIN_GEOMETRY')
         bpy.context.scene.update()
 
-    def set_appearance(self, b_id, mat):
+    def set_appearance(self, obj, mat):
         """
         Assigns a material to a block.
         """
-        obj = bpy.data.objects[b_id]
+        if not mat in bpy.data.materials:
+            raise ValueError('Unknown material {}'.format(mat))
         obj.active_material = bpy.data.materials[mat]
         bpy.context.scene.update()
 
@@ -109,7 +107,7 @@ class BlockScene:
         Initializes a block object.
         """
         block = object_d['block']
-        bpy.ops.mesh.primitive_cube_add(location=object_d['position'],
+        bpy.ops.mesh.primitive_cube_add(location=block['pos'],
                                         view_align=False,
                                         enter_editmode=False)
         ob = bpy.context.object
@@ -120,19 +118,18 @@ class BlockScene:
         self.scale_obj(ob, block['dims'])
         ob.matrix_world.translation
 
-        if 'material' in object_d and 'congruency' in object_d:
-            cong = int(object_d['congruency'])
-            mat = self.materials[object_d['material']]
-            phys_key = not (cong ^ object_d['material'])
-            mass = self.density[phys_key] * \
-                   np.prod(block['dims'])
-            friction = self.friction[phys_key]
+        if 'appearance' in object_d and 'substance' in object_d:
+            mat = object_d['appearance']
+            phys_key = object_d['substance']
         else:
             mat = 'Wood'
-            mass = self.density[1] * np.prod(block['dims'])
-            friction = self.friction[1]
+            phys_key = 'Wood'
 
-        ob.active_material = bpy.data.materials[mat]
+        mass = substances.density[phys_key] * \
+               np.prod(block['dims'])
+        friction = substances.friction[phys_key]
+
+        self.set_appearance(ob, mat)
         bpy.ops.rigidbody.objects_add(type='ACTIVE')
         ob.rigid_body.use_margin = 1
         ob.rigid_body.collision_margin = 0.0
@@ -141,33 +138,47 @@ class BlockScene:
         phys_objs = self.phys_objs
         phys_objs.append(object_d['id'])
         self.phys_objs = phys_objs
+        if self.wire_frame:
+            if ob.name == '5':
+                self.set_appearance(ob, 'Light_Green')
+            else:
+                self.set_appearance(ob, 'L')
+            bpy.ops.object.mode_set(mode='EDIT')
+            # bpy.ops.mesh.subdivide()
+            bpy.ops.object.mode_set(mode='OBJECT')
+            bpy.ops.object.modifier_add(type='WIREFRAME')
+            ob.modifiers['Wireframe'].thickness = 0.2
 
-    def set_base(self, dimensions, pos):
+    def set_base(self, block):
         """
         Creates the table on which the blocks will stand.
         """
         bpy.ops.mesh.primitive_cylinder_add(
-            location = pos,
+            location = block['pos'],
             view_align=False,
             enter_editmode=False)
         ob = bpy.context.object
         ob.name = 'base'
         ob.show_name = False
         ob.data.name = '{}_Mesh'.format('base')
-        self.scale_obj(ob, (10, 10, 1))
-        self.set_appearance('base', 'Marble')
+        self.scale_obj(ob, (15, 15, 1))
+        self.set_appearance(ob, 'Marble')
         bpy.ops.rigidbody.object_add(type='PASSIVE')
         bpy.ops.rigidbody.constraint_add(type='FIXED')
         # Set to deal with issues like jittering
         ob.rigid_body.use_margin = 1
         ob.rigid_body.collision_margin = 0.0
+        if self.wire_frame:
+            ob.cycles_visibility.diffuse = False
+            ob.hide = True
+            ob.hide_render = True
 
     def set_block(self, stack):
         """
         Initializes blocks described in the stack.
         """
         if stack['id'] == 0:
-            self.set_base(stack['block']['dims'], stack['position'])
+            self.set_base(stack['block'])
         else:
             self.create_block(stack)
 
@@ -185,23 +196,46 @@ class BlockScene:
             self.set_block(block)
 
     def set_rendering_params(self, resolution):
+        """
+        Configures various settings for rendering such as resolution.
+        """
         bpy.context.scene.render.fps = 60
         bpy.context.scene.render.resolution_x = resolution[0]
         bpy.context.scene.render.resolution_y = resolution[1]
         bpy.context.scene.render.resolution_percentage = 100
-        bpy.context.scene.cycles.samples = 1000
-        bpy.context.scene.render.tile_x = 16
-        bpy.context.scene.render.tile_y = 16
+        bpy.context.scene.cycles.samples = 500
+        bpy.context.scene.render.tile_x = 24
+        bpy.context.scene.render.tile_y = 24
         bpy.context.scene.render.engine = 'CYCLES'
 
-    def bake_physics(self):
+    def set_camera(self, rot):
+        """
+        Moves the camera along a circular path.
 
+        Arguments:
+            rot (float): angle in degrees along path (0, 360).
+        """
+        radius = 13.0
+        theta = np.pi * (rot / 180.0)
+        # Move camera to position on ring
+        xyz = [np.cos(theta) * radius, np.sin(theta) * radius, 1]
+        camera = bpy.data.objects['Camera']
+        camera.location = xyz
+        bpy.context.scene.update()
+        # Face camera towards point
+        loc_camera = camera.matrix_world.to_translation()
+        direction = mathutils.Vector([0,0,3]) - loc_camera
+        # point the cameras '-Z' and use its 'Y' as up
+        rot_quat = direction.to_track_quat('-Z', 'Y')
+        self.rotate_obj(camera, rot_quat)
+
+
+    def bake_physics(self):
         bpy.context.scene.rigidbody_world.point_cache.frame_end = bpy.context.scene.frame_end
         bpy.context.scene.rigidbody_world.solver_iterations = 100
         bpy.context.scene.rigidbody_world.steps_per_second = 240
         bpy.context.scene.rigidbody_world.time_scale = 1
         bpy.context.scene.rigidbody_world.use_split_impulse = 1
-
         # https://blender.stackexchange.com/questions/35621/setting-overriding-context-for-rigid-body-bake
         bpy.context.scene.update()
         for p_obj in self.phys_objs:
@@ -210,10 +244,10 @@ class BlockScene:
                         'point_cache': bpy.context.scene.rigidbody_world.point_cache,
                         'active_object':object
                         }
-            # bake to current frame
             with Suppressor():
                 bpy.ops.ptcache.bake(override, bake=True)
             break
+            # bake to current frame
 
     def get_trace(self, frames = None):
         """
@@ -242,16 +276,14 @@ class BlockScene:
         return results
 
     def render(self, output_name, frames, show = [],
-               resolution = (256, 256)):
+               resolution = (256, 256), camera_rot = None):
         """
         output_name: Path to save frames
         frames: a list of frames to render (shifted by warmup)
         show: a list of object names to render
         """
-        print('rendering')
         self.set_rendering_params(resolution)
         if len(show) > 0:
-
             for obj in bpy.context.scene.objects:
                 if not obj.name in show:
                     # print("Hiding {0!s}".format(o_name))
@@ -259,12 +291,39 @@ class BlockScene:
                     obj.hide = True
                     obj.hide_render = True
 
-        for frame in frames:
-            out = "{!s}_{:d}".format(output_name, frame)
+        if camera_rot is None:
+            camera_rot = np.zeros(len(frames))
+
+        for i, (frame, cam) in enumerate(zip(frames, camera_rot)):
+            out = "{!s}_{:d}".format(output_name, i)
+            self.set_camera(cam)
             bpy.context.scene.render.filepath = out
             bpy.context.scene.frame_set(frame + self.warmup)
             bpy.context.scene.update()
             bpy.ops.render.render(write_still=True)
+
+
+    def render_circle(self, out_path, freeze = True, dur = 1,
+                      resolution = (256, 256)):
+        """
+        Renders a ring around a tower.
+
+        Arguments:
+            out_path (str): Path to save frames.
+            freeze (bool): Whether or not to run physics.
+            dur (float, optional): Duration in seconds.
+            resolution (float, optional): Resolution of render.
+        """
+        n = int(dur * bpy.context.scene.render.fps)
+        rots = np.linspace(0, 360, n)
+        if freeze == True:
+            frames = np.repeat(1, n)
+        else:
+            frames = np.arange(n) + 1
+
+        self.render(out_path, frames, resolution = resolution,
+                    camera_rot = rots)
+
 
     def save(self, out):
         """
