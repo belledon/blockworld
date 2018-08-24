@@ -139,7 +139,10 @@ class BlockScene:
         phys_objs.append(object_d['id'])
         self.phys_objs = phys_objs
         if self.wire_frame:
-            self.set_appearance(ob, 'L')
+            if ob.name == '5':
+                self.set_appearance(ob, 'Light_Green')
+            else:
+                self.set_appearance(ob, 'L')
             bpy.ops.object.mode_set(mode='EDIT')
             # bpy.ops.mesh.subdivide()
             bpy.ops.object.mode_set(mode='OBJECT')
