@@ -9,10 +9,12 @@ import builders
 class Generator:
 
     """
-    Controls generation of towers
+    Controls generation of towers.
     """
+
     stability_types = ['local', 'global']
     unknowns = ['H', 'L']
+
     def __init__(self, base, n_blocks, materials, stability):
         self.base = base
         self.n_blocks = n_blocks
@@ -106,7 +108,7 @@ class Generator:
         """
         tower = copy.deepcopy(tower)
         materials = np.random.choice(self.materials,
-                                     size = self.n_blocks,
+                                     size = len(tower),
                                      p = self.mat_ps)
 
         tower = tower.apply_feature('substance', materials)
@@ -140,10 +142,9 @@ class Generator:
 
             { 'mat_i' : (congruent, incongruent)
               ...
-            
         """
         subs = tower.extract_feature('substance')
-        n_blocks = len(tower) 
+        n_blocks = len(tower)
         for block_i in range(n_blocks):
             d = {}
             for mat_i in range(len(self.unknowns)):

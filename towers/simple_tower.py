@@ -1,10 +1,30 @@
 import copy
 import json
+import pprint
 import numpy as np
 import networkx as nx
 
+import blocks
 from towers.tower import Tower
 from utils.json_encoders import TowerEncoder
+
+def load(json_file):
+
+    with open(json_file, 'r') as f:
+        d = json.load(f)
+    pprint.pprint(d)
+    for block in d:
+        data = block['data']
+        if block['id'] == 0:
+            c = blocks.BaseBlock(data['dims'][:2])
+        else:
+            c = blocks.SimpleBlock(data['dims'], data['pos'])
+        block['data']['block'] = c
+        del block['data']['pos']
+        del block['data']['dims']
+
+    g = nx.readwrite.json_graph.jit_graph(d, create_using=nx.DiGraph())
+    return SimpleTower(g)
 
 class SimpleTower(Tower):
 
@@ -126,10 +146,57 @@ class SimpleTower(Tower):
 
     def serialize(self):
         g = self.graph
-        d = dict(source='source', target='target', name='id',
-                 key='key', link='links', block = 'block')
-        data = nx.node_link_data(g, attrs=d)
+        # d = dict(source='source', target='target', name='id',
+        #          key='key', link='links', block = 'block')
+        # data = nx.node_link_data(g, attrs=d)
+        print(json.dumps(repr(g.nodes[0]['block'])))
+        data = nx.readwrite.json_graph.jit_data(g, indent = 4)
         return json.loads(json.dumps(data, cls = TowerEncoder))
+
+    def serialize(self, indent = None):
+        """Return data in JIT JSON format.
+        Parameters
+        ----------
+        G : NetworkX Graph
+        indent: optional, default=None
+            If indent is a non-negative integer, then JSON array elements and object
+            members will be pretty-printed with that indent level. An indent level
+            of 0, or negative, will only insert newlines. None (the default) selects
+            the most compact representation.
+        Returns
+        -------
+        data: JIT JSON string
+        """
+        json_graph = []
+        for node in self.graph.nodes():
+            json_node = {
+                "id": node,
+                "name": node
+            }
+            # node data
+            d = {}
+            attr = self.graph.nodes[node]
+            for k in attr:
+                if k == 'block':
+                    d.update(attr[k].serialize())
+                    # d[k] = self.graph.nodes[node][k].serialize()
+                else:
+                    d[k] = attr[k]
+            json_node["data"] = d
+            # adjacencies
+            if self.graph[node]:
+                json_node["adjacencies"] = []
+                for neighbour in self.graph[node]:
+                    adjacency = {
+                        "nodeTo": neighbour,
+                    }
+                    # adjacency data
+                    adjacency["data"] = self.graph.edges[node, neighbour]
+                    json_node["adjacencies"].append(adjacency)
+            json_graph.append(json_node)
+
+        return json_graph
+
 
     def __repr__(self):
         return json.dumps(self.serialize())
@@ -150,6 +217,9 @@ class SimpleTower(Tower):
         return tower
 
     def extract_feature(self, feature):
+        """
+        Retreives the given feature from each block in the tower. 
+        """
         n_blocks = len(self)
         values = []
         tower = copy.deepcopy(self)
