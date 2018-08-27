@@ -106,8 +106,7 @@ class BlockScene:
         """
         Initializes a block object.
         """
-        block = object_d['block']
-        bpy.ops.mesh.primitive_cube_add(location=block['pos'],
+        bpy.ops.mesh.primitive_cube_add(location=object_d['data']['pos'],
                                         view_align=False,
                                         enter_editmode=False)
         ob = bpy.context.object
@@ -115,18 +114,19 @@ class BlockScene:
         ob.show_name = True
         me = ob.data
         me.name = '{0:d}_Mesh'.format(object_d['id'])
-        self.scale_obj(ob, block['dims'])
+        self.scale_obj(ob, object_d['data']['dims'])
         ob.matrix_world.translation
 
-        if 'appearance' in object_d and 'substance' in object_d:
-            mat = object_d['appearance']
-            phys_key = object_d['substance']
+        if 'appearance' in object_d['data'] and \
+           'substance' in object_d['data']:
+            mat = object_d['data']['appearance']
+            phys_key = object_d['data']['substance']
         else:
             mat = 'Wood'
             phys_key = 'Wood'
 
         mass = substances.density[phys_key] * \
-               np.prod(block['dims'])
+               np.prod(object_d['data']['dims'])
         friction = substances.friction[phys_key]
 
         self.set_appearance(ob, mat)
@@ -139,7 +139,8 @@ class BlockScene:
         phys_objs.append(object_d['id'])
         self.phys_objs = phys_objs
         if self.wire_frame:
-            self.set_appearance(ob, 'L')
+            if ob.name == '5':
+                self.set_appearance(ob, 'L')
             bpy.ops.object.mode_set(mode='EDIT')
             # bpy.ops.mesh.subdivide()
             bpy.ops.object.mode_set(mode='OBJECT')
@@ -170,26 +171,21 @@ class BlockScene:
             ob.hide = True
             ob.hide_render = True
 
-    def set_block(self, stack):
+    def set_block(self, block):
         """
-        Initializes blocks described in the stack.
+        Initializes blocks described in the block.
         """
-        if stack['id'] == 0:
-            self.set_base(stack['block'])
+        if block['id'] == 0:
+            self.set_base(block['data'])
         else:
-            self.create_block(stack)
+            self.create_block(block)
 
     def load_scene(self, scene_dict):
         # with open(scenefl, 'rU') as fl:
         if isinstance(scene_dict, str):
             scene_dict = json.loads(scene_dict)
 
-        if not scene_dict['directed']:
-            raise ValueError('Improperly formated json')
-
-        # self.set_base(scene_dict['block']['dims'], scene_dict['position'])
-
-        for block in scene_dict['nodes']:
+        for block in scene_dict:
             self.set_block(block)
 
     def set_rendering_params(self, resolution):

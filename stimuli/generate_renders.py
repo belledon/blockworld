@@ -32,11 +32,11 @@ def simulate_tower(tower, path):
     # if not os.path.isdir(tower_wire):
     #     os.mkdir(tower_wire)
 
-    scene = block_scene.BlockScene(tower_json, wire_frame = False, frames = 120)
-    scene.bake_physics()
-    scene.render(tower_full, np.arange(120, step= 10), resolution = (512, 512),
-                 camera_rot = np.repeat(100, 120))
-    del scene
+    # scene = block_scene.BlockScene(tower_json, wire_frame = False, frames = 120)
+    # scene.bake_physics()
+    # scene.render(tower_full, np.arange(120, step= 10), resolution = (512, 512),
+    #              camera_rot = np.repeat(100, 120))
+    # del scene
 
     scene = block_scene.BlockScene(tower_json, wire_frame = True, frames = 120)
     scene.bake_physics()

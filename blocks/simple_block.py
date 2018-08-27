@@ -130,10 +130,10 @@ class SimpleBlock(Block):
         """
         Serializes the attributes of the block to `dict`.
         """
-        d = dict(
-            dims = self.dimensions.tolist(),
-            pos = self.pos.tolist()
-        )
+        d = {
+            'dims' : list(self.dimensions.astype(float)),
+            'pos'  : list(self.pos.astype(float)),
+        }
         return d
 
     def __repr__(self):

@@ -1,5 +1,4 @@
 import numpy as np
-from pyquaternion import Quaternion
 
 from blocks.simple_block import SimpleBlock
 
@@ -14,6 +13,10 @@ class BaseBlock(SimpleBlock):
         mat (np.ndarray(float)): The matrix representing the box world with a
             fixed height of 1.
     """
+
+    def __init__(self, dims):
+        self.dimensions = dims
+        self.pos = [0, 0, -0.5]
 
     # Properties #
 

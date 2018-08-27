@@ -32,14 +32,8 @@ class EmptyTower(SimpleTower):
 
     @base_dimensions.setter
     def base_dimensions(self, ds):
-
-        if len(ds) != 2:
-            msg = 'Dimensions of length {0:d} not accepted'.format(len(ds))
-            raise ValueError(msg)
-
-        ds = np.array(list(ds) + [1,])
         g = nx.DiGraph()
-        base = SimpleBlock(ds, pos = [0, 0, -0.5])
+        base = BaseBlock(ds)
         g.add_node(0, block = base)
         self._graph = g
 
