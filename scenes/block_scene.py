@@ -131,10 +131,11 @@ class BlockScene:
 
         self.set_appearance(ob, mat)
         bpy.ops.rigidbody.objects_add(type='ACTIVE')
-        ob.rigid_body.use_margin = 1
-        ob.rigid_body.collision_margin = 0.0
         ob.rigid_body.mass = mass
         ob.rigid_body.friction = friction
+        ob.rigid_body.use_margin = 1
+        ob.rigid_body.collision_shape = 'BOX'
+        ob.rigid_body.collision_margin = 0.0
         phys_objs = self.phys_objs
         phys_objs.append(object_d['id'])
         self.phys_objs = phys_objs
@@ -275,6 +276,8 @@ class BlockScene:
         frames: a list of frames to render (shifted by warmup)
         show: a list of object names to render
         """
+        if not os.path.isdir(output_name):
+            os.mkdir(output_name)
         self.set_rendering_params(resolution)
         if len(show) > 0:
             for obj in bpy.context.scene.objects:
@@ -288,7 +291,7 @@ class BlockScene:
             camera_rot = np.zeros(len(frames))
 
         for i, (frame, cam) in enumerate(zip(frames, camera_rot)):
-            out = "{!s}_{:d}".format(output_name, i)
+            out = os.path.join(output_name, str(i))
             self.set_camera(cam)
             bpy.context.scene.render.filepath = out
             bpy.context.scene.frame_set(frame + self.warmup)

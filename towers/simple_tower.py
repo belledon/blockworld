@@ -12,7 +12,6 @@ def load(json_file):
 
     with open(json_file, 'r') as f:
         d = json.load(f)
-    pprint.pprint(d)
     for block in d:
         data = block['data']
         if block['id'] == 0:
@@ -143,15 +142,6 @@ class SimpleTower(Tower):
         Not sure if method will remain.
         """
         return True
-
-    def serialize(self):
-        g = self.graph
-        # d = dict(source='source', target='target', name='id',
-        #          key='key', link='links', block = 'block')
-        # data = nx.node_link_data(g, attrs=d)
-        print(json.dumps(repr(g.nodes[0]['block'])))
-        data = nx.readwrite.json_graph.jit_data(g, indent = 4)
-        return json.loads(json.dumps(data, cls = TowerEncoder))
 
     def serialize(self, indent = None):
         """Return data in JIT JSON format.
