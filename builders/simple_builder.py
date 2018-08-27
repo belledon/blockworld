@@ -64,6 +64,30 @@ class SimpleBuilder(Builder):
         Enumerates the geometrically valid positions for
         a block surface on a tower surface.
 
+        This is done in three stages:
+
+        1) Enumeration:
+         First, an grid is defined over the tower base.
+         This grid represents all possible points in an
+         xy plane.
+
+         Next, the z-normal xy planes of the tower are aggregated into
+         polygon collections (tower levels), where any xy planes residing on
+         the same z-axis belong to the same collection.
+
+         Finally, find the intersect between the xy grid and each tower level.
+
+        2) Proposition:
+         For each tower level-grid intersect, determine if placing the given
+         block at the point causes a collision.
+
+        3) Stability Evalutation:
+         For each non-colliding point on the grid, determine if the placement
+         would be locally stable (algorithm describing in `geotools` module).
+
+        The "parents" of a block are defined as any block that supports the
+        stability of the proposed placement.
+
         Arguments:
            tower (`Tower`): Base to build on
            block_dims (`np.ndarray`): Dimensions of new block
@@ -86,9 +110,11 @@ class SimpleBuilder(Builder):
             block_ids, blocks = zip(*level_blocks)
             # defining the layer
             block_z_surfaces = [b.surface for b in blocks]
-            # [P] -> P
+            # Create a collection of polygons describing this z-slice
             layer = geometry.MultiPolygon(block_z_surfaces)
+            # Find the intersect between the grid of possible points and z-layer
             grid = base_grid.intersection(layer.envelope)
+            # Find all points on grid where the new block would not collide
             proposals = geotools.propose_placements(block, grid, level_z)
 
             locally_stable_f = lambda p : geotools.local_stability(p, layer)
