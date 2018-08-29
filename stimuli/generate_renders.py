@@ -30,11 +30,10 @@ def simulate_tower(tower, path):
     blend_path = os.path.join(path, 'scene.blend')
     scene.bake_physics()
     frozen_path = os.path.join(path, 'frozen')
-    # scene.render_circle(frozen_path, freeze = True, dur = 3,
-    #                     resolution = (128, 128))
+    scene.render_circle(frozen_path, freeze = True, dur = 2,
+                        resolution = (128, 128))
     motion_path = os.path.join(path, 'motion')
-    scene.render_circle(motion_path, freeze = False, dur = 3,
-                        resolution = (512, 512))
+    scene.render(motion_path, np.arange(120), resolution = (128, 128))
     # scene.render(path, np.arange(120, step= 10), resolution = (512, 512),
     #              camera_rot = np.repeat(100, 10))
     # scene.save(blend_path)
