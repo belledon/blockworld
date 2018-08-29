@@ -167,6 +167,13 @@ class Generator:
           - tower (`Tower`) : The randomly sampled congruent tower.
           - configurations : A generator over incongruency for each block.
         """
+        if not isinstance(base, towers.tower.Tower):
+            try:
+                base = list(base)
+            except:
+                raise ValueError('Unsupported base.')
+            base = towers.EmptyTower(base)
+
         for _ in range(n):
             base_tower = self.sample_tower(base, k)
             yield (base_tower, self.configurations(base_tower))

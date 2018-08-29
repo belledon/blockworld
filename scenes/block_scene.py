@@ -160,7 +160,7 @@ class BlockScene:
         ob.name = 'base'
         ob.show_name = False
         ob.data.name = '{}_Mesh'.format('base')
-        self.scale_obj(ob, (15, 15, 1))
+        self.scale_obj(ob, (20, 20, 1))
         self.set_appearance(ob, 'Marble')
         bpy.ops.rigidbody.object_add(type='PASSIVE')
         bpy.ops.rigidbody.constraint_add(type='FIXED')
@@ -289,9 +289,8 @@ class BlockScene:
 
         if camera_rot is None:
             camera_rot = np.zeros(len(frames))
-
         for i, (frame, cam) in enumerate(zip(frames, camera_rot)):
-            out = os.path.join(output_name, str(i))
+            out = os.path.join(output_name, '{0:d}'.format(i))
             self.set_camera(cam)
             bpy.context.scene.render.filepath = out
             bpy.context.scene.frame_set(frame + self.warmup)
@@ -310,12 +309,13 @@ class BlockScene:
             dur (float, optional): Duration in seconds.
             resolution (float, optional): Resolution of render.
         """
+        self.set_rendering_params(resolution)
         n = int(dur * bpy.context.scene.render.fps)
         rots = np.linspace(0, 360, n)
         if freeze == True:
             frames = np.repeat(1, n)
         else:
-            frames = np.arange(n) + 1
+            frames = np.arange(n)
 
         self.render(out_path, frames, resolution = resolution,
                     camera_rot = rots)

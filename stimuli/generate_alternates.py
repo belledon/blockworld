@@ -9,6 +9,7 @@ import pprint
 import argparse
 import numpy as np
 
+from config import CONFIG
 import towers
 from scenes.generator import Generator
 from scenes import block_scene
@@ -27,20 +28,22 @@ def simulate_tower(tower, path):
 def main():
     parser = argparse.ArgumentParser(
         description = 'Generates mutations on given towers')
-    parser.add_argument('src', type = str, help = 'Path to tower jsons')
-    parser.add_argument('out', type = str, help = 'Path to save mutations.')
+    parser.add_argument('--src', type = str, default = 'towers',
+                        help = 'Path to tower jsons')
     args = parser.parse_args()
 
-    if not os.path.isdir(args.out):
-        os.mkdir(args.out)
+    src = os.path.join(CONFIG['data'], args.src)
+    out = os.path.join(CONFIG['data'], '{0!s}_mutated'.format(args.src))
+    if not os.path.isdir(out):
+        os.mkdir(out)
 
     materials = {'Wood' : 1.0}
     gen = Generator(materials, 'local')
 
-    for tower_j in glob.glob(os.path.join(args.src, '*.json')):
+    for tower_j in glob.glob(os.path.join(src, '*.json')):
         base = towers.simple_tower.load(tower_j)
         tower_name = os.path.splitext(os.path.basename(tower_j))[0]
-        tower_path = os.path.join(args.out, tower_name)
+        tower_path = os.path.join(out, tower_name)
         alternates = gen.configurations(base)
 
         for b_id,b  in enumerate(alternates):
