@@ -1,5 +1,6 @@
 #files
 *.simg
 *.json
+config.yaml # User config
 #folders
 data/
