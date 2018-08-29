@@ -24,25 +24,11 @@ class SimpleBuilder(Builder):
 
     """
 
-    def __init__(self, max_blocks, max_height = 100):
-        self.max_blocks = max_blocks
+    def __init__(self, max_height = 100):
         self.max_height = max_height
 
 
     # Properties #
-
-    @property
-    def max_blocks(self):
-        return self._max_blocks
-
-    @max_blocks.setter
-    def max_blocks(self, v):
-        v = int(v)
-        if v <= 0 :
-            msg = '`max_blocks` must be greater than 0'
-            raise ValueError(msg)
-        self._max_blocks = v
-
     @property
     def max_height(self):
         return self._max_height
@@ -56,8 +42,6 @@ class SimpleBuilder(Builder):
         self._max_height = v
 
     # Methods #
-
-
 
     def find_placements(self, tower, block):
         """

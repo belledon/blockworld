@@ -4,6 +4,7 @@ from pyquaternion import Quaternion
 
 from towers.simple_tower import SimpleTower
 from blocks.simple_block import SimpleBlock
+from blocks.base_block import BaseBlock
 
 class EmptyTower(SimpleTower):
 

@@ -14,6 +14,7 @@ import pprint
 import argparse
 import numpy as np
 
+from config import CONFIG
 from scenes.generator import Generator
 from scenes import block_scene
 
@@ -25,41 +26,41 @@ def simulate_tower(tower, path):
     with open(tower, 'r') as f:
         tower_json = json.load(f)
 
-    tower_full = os.path.join(path, 'full')
-    tower_wire = os.path.join(path, 'wire')
-    # if not os.path.isdir(tower_full):
-    #     os.mkdir(tower_full)
-    # if not os.path.isdir(tower_wire):
-    #     os.mkdir(tower_wire)
-
-    # scene = block_scene.BlockScene(tower_json, wire_frame = False, frames = 120)
-    # scene.bake_physics()
-    # scene.render(tower_full, np.arange(120, step= 10), resolution = (512, 512),
-    #              camera_rot = np.repeat(100, 120))
-    # del scene
-
-    scene = block_scene.BlockScene(tower_json, wire_frame = True, frames = 120)
+    scene = block_scene.BlockScene(tower_json, wire_frame = False, frames = 120)
+    blend_path = os.path.join(path, 'scene.blend')
     scene.bake_physics()
-    scene.render(tower_wire, np.arange(120, step= 10), resolution = (512, 512),
-                 camera_rot = np.repeat(100, 120))
+    frozen_path = os.path.join(path, 'frozen')
+    scene.render_circle(frozen_path, freeze = True, dur = 2,
+                        resolution = (128, 128))
+    motion_path = os.path.join(path, 'motion')
+    scene.render(motion_path, np.arange(120), resolution = (128, 128))
+    # scene.render(path, np.arange(120, step= 10), resolution = (512, 512),
+    #              camera_rot = np.repeat(100, 10))
+    # scene.save(blend_path)
+
 
 
 def main():
     parser = argparse.ArgumentParser(
         description = 'Renders the towers in a given directory')
-    parser.add_argument('src', type = str, help = 'Path to tower jsons')
-    parser.add_argument('out', type = str, help = 'Path to save renders.')
+    parser.add_argument('--src', type = str, default = 'towers',
+                        help = 'Path to tower jsons')
 
     args = parser.parse_args()
 
-    if not os.path.isdir(args.out):
-        os.mkdir(args.out)
-    tower_j = args.src
-    tower_name = os.path.splitext(os.path.basename(tower_j))[0]
-    tower_base = os.path.join(args.out, tower_name)
-    if not os.path.isdir(tower_base):
-        os.mkdir(tower_base)
-    simulate_tower(tower_j, tower_base)
+    src = os.path.join(CONFIG['data'], args.src)
+    out = os.path.join(CONFIG['data'], '{0!s}_rendered'.format(args.src))
+
+    if not os.path.isdir(out):
+        os.mkdir(out)
+
+    for tower_j in glob.glob(os.path.join(src, '*.json')):
+        # tower_j = args.src
+        tower_name = os.path.splitext(os.path.basename(tower_j))[0]
+        tower_base = os.path.join(out, tower_name)
+        if not os.path.isdir(tower_base):
+            os.mkdir(tower_base)
+        simulate_tower(tower_j, tower_base)
 
 if __name__ == '__main__':
     main()

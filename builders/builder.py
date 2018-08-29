@@ -19,11 +19,6 @@ class Builder(ABC):
 
     @property
     @abstractmethod
-    def max_blocks(self):
-        pass
-
-    @property
-    @abstractmethod
     def max_height(self):
         pass
 
