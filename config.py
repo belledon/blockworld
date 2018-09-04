@@ -33,8 +33,6 @@ class Config:
     def __getitem__(self, k):
         return self.d[k]
 
-CONFIG = Config()
-
 
 def user_input(msg):
     msg = '{0!s} (y/n)'.format(msg)
@@ -76,8 +74,10 @@ def main():
             with open(config_path, 'w') as f:
                 yaml.dump(c, f)
     else:
+        msg = 'Created new config at: {0!s}'.format(config_path)
         with open(config_path, 'w') as f:
             yaml.dump(c, f)
+        print(msg)
 
 
 if __name__ == '__main__':
