@@ -14,9 +14,11 @@ import pprint
 import argparse
 import numpy as np
 
-from config import CONFIG
+from config import Config
 from scenes.generator import Generator
 from scenes import block_scene
+
+CONFIG = Config()
 
 def simulate_tower(tower, path):
     """
@@ -31,12 +33,10 @@ def simulate_tower(tower, path):
     scene.bake_physics()
     frozen_path = os.path.join(path, 'frozen')
     scene.render_circle(frozen_path, freeze = True, dur = 2,
-                        resolution = (128, 128))
+                        resolution = (256, 256))
     motion_path = os.path.join(path, 'motion')
-    scene.render(motion_path, np.arange(120), resolution = (128, 128))
-    # scene.render(path, np.arange(120, step= 10), resolution = (512, 512),
-    #              camera_rot = np.repeat(100, 10))
-    # scene.save(blend_path)
+    scene.render(motion_path, np.arange(120), resolution = (256, 256))
+    scene.save(blend_path)
 
 
 
@@ -55,7 +55,6 @@ def main():
         os.mkdir(out)
 
     for tower_j in glob.glob(os.path.join(src, '*.json')):
-        # tower_j = args.src
         tower_name = os.path.splitext(os.path.basename(tower_j))[0]
         tower_base = os.path.join(out, tower_name)
         if not os.path.isdir(tower_base):

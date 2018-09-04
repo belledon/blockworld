@@ -5,7 +5,8 @@ import subprocess
 
 import numpy as np
 
-from config import CONFIG
+from config import Config
+CONFIG = Config()
 
 def ffmpeg(source, out, extend = 0, image = None):
     cmd = ("ffmpeg -r 60 -i {0!s} -pix_fmt yuv420p -vcodec libx264 "+\

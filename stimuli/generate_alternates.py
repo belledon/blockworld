@@ -9,10 +9,12 @@ import pprint
 import argparse
 import numpy as np
 
-from config import CONFIG
+from config import Config
 import towers
 from scenes.generator import Generator
 from scenes import block_scene
+
+CONFIG = Config()
 
 def simulate_tower(tower, path):
     """
@@ -47,6 +49,8 @@ def main():
         alternates = gen.configurations(base)
 
         for b_id,b  in enumerate(alternates):
+            if b_id < 4:
+                continue
             b_path = '{0!s}_b_{1:d}'.format(tower_path, b_id)
             for mat in b:
                 m_path = '{0!s}_m_{1!s}_con.json'.format(b_path, mat)

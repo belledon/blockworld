@@ -11,10 +11,11 @@ import argparse
 import numpy as np
 import networkx as nx
 
-from config import CONFIG
+from config import Config
 import towers
 from scenes.generator import Generator
 
+CONFIG = Config()
 
 def main():
     parser = argparse.ArgumentParser(
@@ -28,19 +29,23 @@ def main():
 
     args = parser.parse_args()
     out_d = os.path.join(CONFIG['data'], args.out)
-    if not os.path.isdir(out_d):
-        os.mkdir(out_d)
 
     if args.base is None:
         base = (2,1)
     else:
         base = towers.simple_tower.load(args.base)
+        out_d += '_extended'
+        base_path = os.path.basename(os.path.splitext(args.base)[0])
 
+    if not os.path.isdir(out_d):
+        os.mkdir(out_d)
+        
     materials = {'Wood' : 1.0}
     gen = Generator(materials, 'local')
 
     for i, (new_tower, alt) in enumerate(gen(base, k = args.b, n = args.n)):
-        base_name = 'blocks_{0:d}_tower_{1:d}.json'.format(args.b, i)
+        base_name = 'blocks_{0:d}_tower_{1:d}_base_{2!s}.json'
+        base_name = base_name.format(len(new_tower), i, base_path)
         out = os.path.join(out_d, base_name)
         with open(out, 'w') as f:
             json.dump(new_tower.serialize(), f, indent=4, sort_keys = True)
