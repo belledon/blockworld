@@ -46,9 +46,22 @@ class TowerEntropy:
         return [t['position'] for t in trace]
 
     def movement(self, positions, eps = 1E-3):
-        vel = np.abs((positions[-1] - positions[0]) / len(positions))
-        print(np.mean(np.round(vel, 3)))
+        vel = velocity(positions)
         return np.mean(np.round(vel, 3)) > eps
+
+    def kinetic_energy(self, tower, frames = 30):
+        """
+        Computes the kinetic energy summed across each block
+        for each time frame.
+        """
+        positions = self.simulate(tower)[:frames]
+        # for each frame, for each object, 1 vel value
+        vel = np.mean(velocity(positions), axis = 1)
+        mass  = tower.extract_feature('mass')
+        # sum the vel^2 for each object across frames
+        ke = 0.5 * mass * np.sum(np.square(mass), axis = 1)
+        return np.sum(ke)
+
 
     #-------------------------------------------------------------------------#
 
@@ -63,7 +76,7 @@ class TowerEntropy:
         d = [
             {'id' : 'template',
               'body' : tower,
-              'entropy' : self.entropy(tower)}
+              'ke' : self.kenetic_energy(tower)}
         ]
 
         for (block_id, c_tower) in configurations:
@@ -71,7 +84,13 @@ class TowerEntropy:
                 {
                     'id'      : '{0:d}'.format(block_id),
                     'body'    : c_tower,
-                    'entropy' : self.entropy(tower)
+                    'ke' : self.kenetic_energy(tower)
                 })
 
         return d
+
+def velocity(positions):
+    """
+    Computes step-wise velocity.
+    """
+    return np.abs((positions[-1] - positions[0]) / len(positions))

@@ -39,7 +39,7 @@ def main():
 
     if not os.path.isdir(out_d):
         os.mkdir(out_d)
-        
+
     materials = {'Wood' : 1.0}
     gen = Generator(materials, 'local')
 
