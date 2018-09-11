@@ -1,5 +1,7 @@
 import copy
 import pprint
+from collections import OrderedDict
+
 import numpy as np
 
 import blocks
@@ -28,11 +30,14 @@ class Generator:
     @materials.setter
     def materials(self, m):
         keys, vals = zip(*m.items())
-        if np.sum(vals) != 1:
+        ps, mats = list(zip(*vals))
+        if np.sum(ps) != 1:
             raise ValueError('Material distribution does not sum to one.')
+        elif not all(map(lambda x: isinstance(x, Material), mats)):
+            raise ValueError('Element must be a Material.')
         else:
-            self._materials = list(keys)
-            self._mat_ps = list(vals)
+            self._materials = OrderedDict(list(zip(keys, mats)))
+            self._mat_ps = ps
 
     @property
     def mat_ps(self):
@@ -101,7 +106,8 @@ class Generator:
                                      size = len(tower),
                                      p = self.mat_ps)
 
-        tower = tower.apply_feature('substance', materials)
+        substances = [self.materials[m].serialize() for m in materials]
+        tower = tower.apply_feature('substance', substances)
         tower = tower.apply_feature('appearance', materials)
         return tower
 

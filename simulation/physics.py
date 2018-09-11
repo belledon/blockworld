@@ -65,7 +65,7 @@ class TowerEntropy:
 
     #-------------------------------------------------------------------------#
 
-    def __call__(self, tower, configurations):
+    def __call__(self, tower, configurations = None):
         """
         Evaluates the stability of the tower at each block.
 
@@ -79,13 +79,14 @@ class TowerEntropy:
               'ke' : self.kenetic_energy(tower)}
         ]
 
-        for (block_id, c_tower) in configurations:
-            d.append(
-                {
-                    'id'      : '{0:d}'.format(block_id),
-                    'body'    : c_tower,
-                    'ke' : self.kenetic_energy(tower)
-                })
+        if not configurations is None:
+            for (block_id, c_tower) in configurations:
+                d.append(
+                    {
+                        'id'      : '{0:d}'.format(block_id),
+                        'body'    : c_tower,
+                        'ke' : self.kenetic_energy(tower)
+                    })
 
         return d
 
