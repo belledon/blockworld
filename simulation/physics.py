@@ -57,7 +57,9 @@ class TowerEntropy:
         positions = self.simulate(tower)[:frames]
         # for each frame, for each object, 1 vel value
         vel = np.mean(velocity(positions), axis = 1)
-        mass  = tower.extract_feature('mass')
+        density  = tower.extract_feature('density')
+        volume = tower.extract_feature('volume')
+        mass = density * volume
         # sum the vel^2 for each object across frames
         ke = 0.5 * mass * np.sum(np.square(mass), axis = 1)
         return np.sum(ke)
