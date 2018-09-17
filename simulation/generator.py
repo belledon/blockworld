@@ -8,6 +8,8 @@ import blocks
 import towers
 import builders
 
+from simulation.substances import Substance
+
 class Generator:
 
     """
@@ -29,14 +31,11 @@ class Generator:
 
     @materials.setter
     def materials(self, m):
-        keys, vals = zip(*m.items())
-        ps, mats = list(zip(*vals))
+        mats, ps = zip(*m.items())
         if np.sum(ps) != 1:
             raise ValueError('Material distribution does not sum to one.')
-        elif not all(map(lambda x: isinstance(x, Material), mats)):
-            raise ValueError('Element must be a Material.')
         else:
-            self._materials = OrderedDict(list(zip(keys, mats)))
+            self._materials = list(mats)
             self._mat_ps = ps
 
     @property
@@ -106,7 +105,7 @@ class Generator:
                                      size = len(tower),
                                      p = self.mat_ps)
 
-        substances = [self.materials[m].serialize() for m in materials]
+        substances = [Substance(m).serialize() for m in materials]
         tower = tower.apply_feature('substance', substances)
         tower = tower.apply_feature('appearance', materials)
         return tower

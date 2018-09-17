@@ -64,6 +64,9 @@ class BlockScene:
 
 
     def select_obj(self, obj):
+        """
+        Brings the given object into active context.
+        """
         bpy.ops.object.select_all(action='DESELECT')
         obj.select = True
         bpy.context.scene.objects.active
@@ -71,12 +74,18 @@ class BlockScene:
 
 
     def rotate_obj(self, obj, rot):
+        """
+        Rotates the given object by the given quaternion.
+        """
         self.select_obj(obj)
         obj.rotation_mode = 'QUATERNION'
         obj.rotation_quaternion = rot
         bpy.context.scene.update()
 
     def move_obj(self, obj, pos):
+        """
+        Moves the given object by the given 3-d vector.
+        """
         self.select_obj(obj)
         pos = mathutils.Vector(pos)
         print(obj.name, 'OLD POS', obj.location)
@@ -87,6 +96,9 @@ class BlockScene:
         print(obj.name, 'NEW POS', obj.location)
 
     def scale_obj(self, obj, dims):
+        """
+        Rescales to the object to the given dimensions.
+        """
         self.select_obj(obj)
         obj.dimensions = dims
         bpy.context.scene.update()
@@ -120,14 +132,15 @@ class BlockScene:
         if 'appearance' in object_d['data'] and \
            'substance' in object_d['data']:
             mat = object_d['data']['appearance']
-            phys_key = object_d['data']['substance']
+            mass = object_d['data']['substance']['density'] * \
+                   np.prod(object_d['data']['dims'])
+            friciton = object_d['data']['substance']['friction']
         else:
             mat = 'Wood'
             phys_key = 'Wood'
-
-        mass = substances.density[phys_key] * \
+            mass = substances.density[phys_key] * \
                np.prod(object_d['data']['dims'])
-        friction = substances.friction[phys_key]
+            friction = substances.friction[phys_key]
 
         self.set_appearance(ob, mat)
         bpy.ops.rigidbody.objects_add(type='ACTIVE')

@@ -13,7 +13,7 @@ import networkx as nx
 
 from config import Config
 import towers
-from scenes.generator import Generator
+from simulation.generator import Generator
 
 CONFIG = Config()
 
@@ -32,6 +32,7 @@ def main():
 
     if args.base is None:
         base = (2,1)
+        base_path = '{0:d}x{1:d}'.format(*base)
     else:
         base = towers.simple_tower.load(args.base)
         out_d += '_extended'
