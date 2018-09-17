@@ -134,7 +134,7 @@ class BlockScene:
             mat = object_d['data']['appearance']
             mass = object_d['data']['substance']['density'] * \
                    np.prod(object_d['data']['dims'])
-            friciton = object_d['data']['substance']['friction']
+            friction = object_d['data']['substance']['friction']
         else:
             mat = 'Wood'
             phys_key = 'Wood'

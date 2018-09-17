@@ -1,0 +1,4 @@
+[submodule "compy"]
+	path = compy
+	url = git@github.mit.edu:belledon/compy.git
+	branch = pilot

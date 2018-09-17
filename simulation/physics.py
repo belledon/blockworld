@@ -2,6 +2,8 @@ import copy
 import pprint
 import numpy as np
 
+import towers
+import blocks
 from . import block_scene
 
 class TowerEntropy:
@@ -10,27 +12,9 @@ class TowerEntropy:
     Performs "entropy" analysis on towers.
     """
 
-    def __init__(self, energy):
-        self.structure = tower
-        self.materials = materials
-
-
-    @property
-    def materials(self):
-        return self._materials
-
-    @materials.setter
-    def materials(self, m):
-        keys, vals = zip(*m.items())
-        self._materials = list(keys)
-        self._mat_ps = list(vals)
-
-    @property
-    def mat_ps(self):
-        return self._mat_ps
-
-    #-------------------------------------------------------------------------#
-
+    def __init__(self, noise = 0.1, dims = [0, 1]):
+        self.noise = noise
+        self.dims = dims
 
     #-------------------------------------------------------------------------#
 
@@ -40,7 +24,8 @@ class TowerEntropy:
         """
         Controls simulations and extracts positions
         """
-        scene = block_scene.BlockScene(tower, frames = 10)
+        tower_s = tower.serialize()
+        scene = block_scene.BlockScene(tower_s, frames = 10)
         scene.bake_physics()
         trace = scene.get_trace(frames = [0, 10])
         return [t['position'] for t in trace]
@@ -49,6 +34,14 @@ class TowerEntropy:
         vel = velocity(positions)
         return np.mean(np.round(vel, 3)) > eps
 
+    def perturb(self, tower, n = 100):
+        """
+        Generates `n` tower perturbations where each block in the tower
+        is randomly shifted by a guassian with std = `noise`.
+        """
+        return [shift(tower, self.noise) for _ in range(n)]
+
+    # TODO clean up density and volume retrieval...
     def kinetic_energy(self, tower, frames = 30):
         """
         Computes the kinetic energy summed across each block
@@ -57,13 +50,23 @@ class TowerEntropy:
         positions = self.simulate(tower)[:frames]
         # for each frame, for each object, 1 vel value
         vel = np.mean(velocity(positions), axis = 1)
-        density  = tower.extract_feature('density')
-        volume = tower.extract_feature('volume')
+        phys_params = tower.extract_feature('substance')
+        density  = np.array([d['density'] for d in phys_params])
+        volume = np.array([np.prod(tower.blocks[i+1]['block'].dimensions)
+                           for i in range(len(tower))])
         mass = density * volume
         # sum the vel^2 for each object across frames
-        ke = 0.5 * mass * np.sum(np.square(mass), axis = 1)
+        ke = 0.5 * mass * np.square(vel)
         return np.sum(ke)
 
+    def analyze(self, tower):
+        """
+        Returns statistics (mean, std) over the KE of a tower
+        under random perturbations.
+        """
+        perturbations = self.perturb(tower)
+        kes = [self.kinetic_energy(p) for p in perturbations]
+        return tuple((np.mean(kes), np.std(kes)))
 
     #-------------------------------------------------------------------------#
 
@@ -78,7 +81,7 @@ class TowerEntropy:
         d = [
             {'id' : 'template',
               'body' : tower,
-              'ke' : self.kenetic_energy(tower)}
+              'ke' : self.analyze(tower)}
         ]
 
         if not configurations is None:
@@ -87,7 +90,7 @@ class TowerEntropy:
                     {
                         'id'      : '{0:d}'.format(block_id),
                         'body'    : c_tower,
-                        'ke' : self.kenetic_energy(tower)
+                        'ke' : self.analyze(tower)
                     })
 
         return d
@@ -97,3 +100,18 @@ def velocity(positions):
     Computes step-wise velocity.
     """
     return np.abs((positions[-1] - positions[0]) / len(positions))
+
+def shift(tower, std):
+    """
+    Applies an xy shift to blocks in a tower.
+    """
+    deltas = np.zeros((len(tower), 3))
+    deltas[:, 0:2] = np.random.normal(scale = std, size = (len(tower), 2))
+    tower_d = tower.serialize()
+    for block_i in range(len(tower)):
+        block = tower.blocks[block_i + 1]['block']
+        new_pos = block.pos + deltas[block_i]
+        tower_d[block_i + 1]['data']['pos'] = new_pos
+
+    new_tower = towers.simple_tower.load(tower_d)
+    return new_tower
