@@ -12,9 +12,10 @@ class TowerEntropy:
     Performs "entropy" analysis on towers.
     """
 
-    def __init__(self, noise = 0.1, dims = [0, 1]):
+    def __init__(self, noise = 0.5, dims = [0, 1], frames = 30):
         self.noise = noise
         self.dims = dims
+        self.frames = frames
 
     #-------------------------------------------------------------------------#
 
@@ -25,16 +26,16 @@ class TowerEntropy:
         Controls simulations and extracts positions
         """
         tower_s = tower.serialize()
-        scene = block_scene.BlockScene(tower_s, frames = 10)
+        scene = block_scene.BlockScene(tower_s, frames = self.frames)
         scene.bake_physics()
-        trace = scene.get_trace(frames = [0, 10])
-        return [t['position'] for t in trace]
+        trace = scene.get_trace(frames = np.arange(self.frames))
+        return np.array([t['position'] for t in trace])
 
     def movement(self, positions, eps = 1E-3):
         vel = velocity(positions)
         return np.mean(np.round(vel, 3)) > eps
 
-    def perturb(self, tower, n = 100):
+    def perturb(self, tower, n = 50):
         """
         Generates `n` tower perturbations where each block in the tower
         is randomly shifted by a guassian with std = `noise`.
@@ -42,14 +43,15 @@ class TowerEntropy:
         return [shift(tower, self.noise) for _ in range(n)]
 
     # TODO clean up density and volume retrieval...
-    def kinetic_energy(self, tower, frames = 30):
+    def kinetic_energy(self, tower):
         """
         Computes the kinetic energy summed across each block
         for each time frame.
         """
-        positions = self.simulate(tower)[:frames]
+        positions = self.simulate(tower)
+        positions = positions[:self.frames]
         # for each frame, for each object, 1 vel value
-        vel = np.mean(velocity(positions), axis = 1)
+        vel = np.mean(np.sum(velocity(positions), axis = 0), axis = 1)
         phys_params = tower.extract_feature('substance')
         density  = np.array([d['density'] for d in phys_params])
         volume = np.array([np.prod(tower.blocks[i+1]['block'].dimensions)
@@ -99,7 +101,7 @@ def velocity(positions):
     """
     Computes step-wise velocity.
     """
-    return np.abs((positions[-1] - positions[0]) / len(positions))
+    return np.abs((positions[1:] - positions[:-1]) / len(positions))
 
 def shift(tower, std):
     """
