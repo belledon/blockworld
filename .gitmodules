@@ -1,7 +1,3 @@
-[submodule "compy"]
-	path = compy
-	url = git@github.mit.edu:belledon/compy.git
-	branch = pilot
 [submodule "monte_carlo"]
 	path = monte_carlo
 	url = git@github.mit.edu:belledon/monte_carlo.git
