@@ -1,4 +1,0 @@
-[submodule "monte_carlo"]
-	path = monte_carlo
-	url = git@github.mit.edu:belledon/monte_carlo.git
-	branch = pilot
