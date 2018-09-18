@@ -15,6 +15,7 @@ from: belledon/blender_sing:latest
                SQLAlchemy \
                pydot pyyaml networkx \
                pyquaternion \
-               shapely
+               shapely \
+               pyyaml
 
   pip3 install --upgrade numpy

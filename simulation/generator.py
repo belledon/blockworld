@@ -1,10 +1,14 @@
 import copy
 import pprint
+from collections import OrderedDict
+
 import numpy as np
 
 import blocks
 import towers
 import builders
+
+from simulation.substances import Substance
 
 class Generator:
 
@@ -15,24 +19,11 @@ class Generator:
     stability_types = ['local', 'global']
     unknowns = ['H', 'L']
 
-    def __init__(self, base, n_blocks, materials, stability):
-        self.base = base
-        self.n_blocks = n_blocks
+    def __init__(self, materials, stability):
         self.materials = materials
         self.builder = stability
 
     # Properties and Setters
-
-    @property
-    def n_blocks(self):
-        return self._n_blocks
-
-    @n_blocks.setter
-    def n_blocks(self, n):
-        n = int(n)
-        if n <= 0 :
-            raise ValueError('n_blocks must be > 1.')
-        self._n_blocks = n
 
     @property
     def materials(self):
@@ -40,12 +31,12 @@ class Generator:
 
     @materials.setter
     def materials(self, m):
-        keys, vals = zip(*m.items())
-        if np.sum(vals) != 1:
+        mats, ps = zip(*m.items())
+        if np.sum(ps) != 1:
             raise ValueError('Material distribution does not sum to one.')
         else:
-            self._materials = list(keys)
-            self._mat_ps = list(vals)
+            self._materials = list(mats)
+            self._mat_ps = ps
 
     @property
     def mat_ps(self):
@@ -61,7 +52,7 @@ class Generator:
            (not s in self.stability_types):
             raise ValueError('Unkown builder type.')
 
-        self._builder = builders.SimpleBuilder(self.n_blocks)
+        self._builder = builders.SimpleBuilder()
 
     @property
     def base(self):
@@ -83,21 +74,24 @@ class Generator:
 
     # Material assignment and sampling
 
-    def sample_blocks(self):
+    def sample_blocks(self, n):
         """
         Procedurally generates blocks of cardinal orientations.
         """
-        for i in range(self.n_blocks):
+        n = int(n)
+        if n <= 0 :
+            raise ValueError('n_blocks must be > 1.')
+        for _ in range(n):
             block_dims = np.array([2, 1, 1])
             np.random.shuffle(block_dims)
             yield blocks.SimpleBlock(block_dims)
 
-    def sample_structure(self):
+    def sample_structure(self, base, n):
         """
         Procedurally builds on top of the given `base` tower.
         """
-        base = copy.copy(self.base)
-        blocks = self.sample_blocks()
+        base = copy.copy(base)
+        blocks = self.sample_blocks(n)
         new_tower = self.builder(base, blocks)
         return new_tower
 
@@ -111,15 +105,16 @@ class Generator:
                                      size = len(tower),
                                      p = self.mat_ps)
 
-        tower = tower.apply_feature('substance', materials)
+        substances = [Substance(m).serialize() for m in materials]
+        tower = tower.apply_feature('substance', substances)
         tower = tower.apply_feature('appearance', materials)
         return tower
 
-    def sample_tower(self):
+    def sample_tower(self, base, n):
         """
         Procedurally generates a tower.
         """
-        tower = self.sample_structure()
+        tower = self.sample_structure(base, n)
         tower = self.sample_materials(tower)
         return tower
 
@@ -164,48 +159,26 @@ class Generator:
 
     #-------------------------------------------------------------------------#
 
-    def __call__(self, n = 1):
+    def __call__(self, base, k = 1, n = 1):
         """
         Generates the given number of random towers.
 
         Arguments:
+          - base (`tower.Tower` or tuple): Base to build on.
+          - k (optional, `int`): The number of blocks to add per tower.
           - n (optional) : The number of towers to generate.
         Returns:
           A generator yielding tuples of the for (tower, configurations).
           - tower (`Tower`) : The randomly sampled congruent tower.
           - configurations : A generator over incongruency for each block.
         """
+        if not isinstance(base, towers.tower.Tower):
+            try:
+                base = list(base)
+            except:
+                raise ValueError('Unsupported base.')
+            base = towers.EmptyTower(base)
+
         for _ in range(n):
-            base_tower = self.sample_tower()
+            base_tower = self.sample_tower(base, k)
             yield (base_tower, self.configurations(base_tower))
-
-
-# Helper functions
-
-# def extract_feature(blocks, feature):
-#     n_blocks = len(blocks)
-#     values = []
-#     order = []
-#     for block in blocks:
-#         b_id = block['id']
-#         if b_id > 0:
-#             values.append(block[feature])
-#             order.append(int(b_id) - 1)
-#     return np.array(values)[order]
-
-# def apply_feature(tower, feature, values):
-#     """
-#     Applys a feature to a set of blocks in a tower
-#     """
-#     tower = copy.deepcopy(tower)
-#     n_blocks = len(tower)
-#     n_values = len(values)
-#     if n_blocks != n_values:
-#         raise ValueError('Block, values missmatch')
-
-#     for b_id, block in enumerate(tower.blocks):
-#         if b_id == 0:
-#             continue
-#         block[feature] = values[b_id]
-
-#     return tower

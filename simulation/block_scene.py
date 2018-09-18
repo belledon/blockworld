@@ -64,6 +64,9 @@ class BlockScene:
 
 
     def select_obj(self, obj):
+        """
+        Brings the given object into active context.
+        """
         bpy.ops.object.select_all(action='DESELECT')
         obj.select = True
         bpy.context.scene.objects.active
@@ -71,12 +74,18 @@ class BlockScene:
 
 
     def rotate_obj(self, obj, rot):
+        """
+        Rotates the given object by the given quaternion.
+        """
         self.select_obj(obj)
         obj.rotation_mode = 'QUATERNION'
         obj.rotation_quaternion = rot
         bpy.context.scene.update()
 
     def move_obj(self, obj, pos):
+        """
+        Moves the given object by the given 3-d vector.
+        """
         self.select_obj(obj)
         pos = mathutils.Vector(pos)
         print(obj.name, 'OLD POS', obj.location)
@@ -87,6 +96,9 @@ class BlockScene:
         print(obj.name, 'NEW POS', obj.location)
 
     def scale_obj(self, obj, dims):
+        """
+        Rescales to the object to the given dimensions.
+        """
         self.select_obj(obj)
         obj.dimensions = dims
         bpy.context.scene.update()
@@ -120,21 +132,23 @@ class BlockScene:
         if 'appearance' in object_d['data'] and \
            'substance' in object_d['data']:
             mat = object_d['data']['appearance']
-            phys_key = object_d['data']['substance']
+            mass = object_d['data']['substance']['density'] * \
+                   np.prod(object_d['data']['dims'])
+            friction = object_d['data']['substance']['friction']
         else:
             mat = 'Wood'
             phys_key = 'Wood'
-
-        mass = substances.density[phys_key] * \
+            mass = substances.density[phys_key] * \
                np.prod(object_d['data']['dims'])
-        friction = substances.friction[phys_key]
+            friction = substances.friction[phys_key]
 
         self.set_appearance(ob, mat)
         bpy.ops.rigidbody.objects_add(type='ACTIVE')
-        ob.rigid_body.use_margin = 1
-        ob.rigid_body.collision_margin = 0.0
         ob.rigid_body.mass = mass
         ob.rigid_body.friction = friction
+        ob.rigid_body.use_margin = 1
+        ob.rigid_body.collision_shape = 'BOX'
+        ob.rigid_body.collision_margin = 0.0
         phys_objs = self.phys_objs
         phys_objs.append(object_d['id'])
         self.phys_objs = phys_objs
@@ -159,7 +173,7 @@ class BlockScene:
         ob.name = 'base'
         ob.show_name = False
         ob.data.name = '{}_Mesh'.format('base')
-        self.scale_obj(ob, (15, 15, 1))
+        self.scale_obj(ob, (20, 20, 1))
         self.set_appearance(ob, 'Marble')
         bpy.ops.rigidbody.object_add(type='PASSIVE')
         bpy.ops.rigidbody.constraint_add(type='FIXED')
@@ -275,6 +289,8 @@ class BlockScene:
         frames: a list of frames to render (shifted by warmup)
         show: a list of object names to render
         """
+        if not os.path.isdir(output_name):
+            os.mkdir(output_name)
         self.set_rendering_params(resolution)
         if len(show) > 0:
             for obj in bpy.context.scene.objects:
@@ -286,9 +302,8 @@ class BlockScene:
 
         if camera_rot is None:
             camera_rot = np.zeros(len(frames))
-
         for i, (frame, cam) in enumerate(zip(frames, camera_rot)):
-            out = "{!s}_{:d}".format(output_name, i)
+            out = os.path.join(output_name, '{0:d}'.format(i))
             self.set_camera(cam)
             bpy.context.scene.render.filepath = out
             bpy.context.scene.frame_set(frame + self.warmup)
@@ -307,12 +322,13 @@ class BlockScene:
             dur (float, optional): Duration in seconds.
             resolution (float, optional): Resolution of render.
         """
+        self.set_rendering_params(resolution)
         n = int(dur * bpy.context.scene.render.fps)
         rots = np.linspace(0, 360, n)
         if freeze == True:
             frames = np.repeat(1, n)
         else:
-            frames = np.arange(n) + 1
+            frames = np.arange(n)
 
         self.render(out_path, frames, resolution = resolution,
                     camera_rot = rots)

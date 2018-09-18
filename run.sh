@@ -11,12 +11,11 @@ fi
 
 BASE="$(echo "$ROOT" | cut -d "/" -f2)"
 export PYTHONPATH=$ROOT
-PREFIX="$( git rev-parse --show-prefix )"
-SCRIPT="${ROOT}/${PREFIX}/$1"
+SCRIPT="$1"
 shift
 
 CONT="${ROOT}/singularity/env.simg"
 
-singularity exec -B "/$BASE:/$BASE" $CONT python3 $SCRIPT "$@"
+singularity exec -B "/$BASE:/$BASE" $CONT $SCRIPT "$@"
 
 

@@ -10,9 +10,11 @@ from utils.json_encoders import TowerEncoder
 
 def load(json_file):
 
-    with open(json_file, 'r') as f:
-        d = json.load(f)
-    pprint.pprint(d)
+    if isinstance(json_file, str):
+        with open(json_file, 'r') as f:
+            d = json.load(f)
+    else:
+        d = json_file
     for block in d:
         data = block['data']
         if block['id'] == 0:
@@ -144,15 +146,6 @@ class SimpleTower(Tower):
         """
         return True
 
-    def serialize(self):
-        g = self.graph
-        # d = dict(source='source', target='target', name='id',
-        #          key='key', link='links', block = 'block')
-        # data = nx.node_link_data(g, attrs=d)
-        print(json.dumps(repr(g.nodes[0]['block'])))
-        data = nx.readwrite.json_graph.jit_data(g, indent = 4)
-        return json.loads(json.dumps(data, cls = TowerEncoder))
-
     def serialize(self, indent = None):
         """Return data in JIT JSON format.
         Parameters
@@ -218,11 +211,11 @@ class SimpleTower(Tower):
 
     def extract_feature(self, feature):
         """
-        Retreives the given feature from each block in the tower. 
+        Retreives the given feature from each block in the tower.
         """
         n_blocks = len(self)
         values = []
         tower = copy.deepcopy(self)
-        for b_id in np.arange(n_blocks):
-            values.append(tower.blocks[b_id+1][feature])
+        for b_id in np.arange(n_blocks) + 1:
+            values.append(tower.blocks[b_id][feature])
         return np.array(values)
