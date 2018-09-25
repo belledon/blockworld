@@ -1,6 +1,6 @@
 import numpy as np
 
-from blocks.simple_block import SimpleBlock
+from blockworld.blocks.simple_block import SimpleBlock
 
 
 class BaseBlock(SimpleBlock):

@@ -6,8 +6,8 @@ import numpy as np
 from shapely import geometry, affinity
 # from shapely.prepared import prep
 
-from utils import math_2d, geotools
-from builders.builder import Builder
+from blockworld.utils import math_2d, geotools
+from blockworld.builders.builder import Builder
 
 
 class SimpleBuilder(Builder):

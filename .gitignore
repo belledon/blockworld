@@ -2,5 +2,6 @@
 *.simg
 *.json
 config.yaml # User config
+__pycache__
 #folders
 data/

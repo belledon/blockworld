@@ -1,12 +1,13 @@
 import copy
 import json
 import pprint
+
 import numpy as np
 import networkx as nx
 
-import blocks
-from towers.tower import Tower
-from utils.json_encoders import TowerEncoder
+from blockworld import blocks
+from blockworld.towers.tower import Tower
+from blockworld.utils.json_encoders import TowerEncoder
 
 def load(json_file):
 
@@ -40,8 +41,8 @@ class SimpleTower(Tower):
             the tower.
     """
 
-    def __init__(self, blocks):
-        self.graph = blocks
+    def __init__(self, blks):
+        self.graph = blks
 
     # Properties #
 

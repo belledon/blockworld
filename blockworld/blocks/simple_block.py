@@ -1,7 +1,7 @@
 import numpy as np
 from shapely import geometry, affinity
 
-from blocks.block import Block
+from blockworld.blocks.block import Block
 
 class SimpleBlock(Block):
 

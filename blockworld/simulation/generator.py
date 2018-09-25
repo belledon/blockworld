@@ -4,11 +4,8 @@ from collections import OrderedDict
 
 import numpy as np
 
-import blocks
-import towers
-import builders
-
-from simulation.substances import Substance
+from blockworld import blocks, towers, builders
+from blockworld.simulation.substances import Substance
 
 class Generator:
 

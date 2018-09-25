@@ -7,7 +7,7 @@ import mathutils
 import numpy as np
 
 
-from . import substances
+from blockworld.simulation import substances
 
 #################################################
 # https://stackoverflow.com/questions/28075599/opening-blend-files-using-blenders-python-api

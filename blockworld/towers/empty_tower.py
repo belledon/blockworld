@@ -2,9 +2,9 @@ import numpy as np
 import networkx as nx
 from pyquaternion import Quaternion
 
-from towers.simple_tower import SimpleTower
-from blocks.simple_block import SimpleBlock
-from blocks.base_block import BaseBlock
+from blockworld.towers.simple_tower import SimpleTower
+from blockworld.blocks.simple_block import SimpleBlock
+from blockworld.blocks.base_block import BaseBlock
 
 class EmptyTower(SimpleTower):
 

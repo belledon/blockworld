@@ -2,9 +2,8 @@ import copy
 import pprint
 import numpy as np
 
-import towers
-import blocks
-from . import block_scene
+from blockworld import towers, blocks
+from blockworld.simulation import block_scene
 
 class TowerEntropy:
 

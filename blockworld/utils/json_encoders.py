@@ -2,7 +2,7 @@ import json
 import numpy as np
 from pyquaternion import Quaternion
 
-from blocks.simple_block import SimpleBlock
+from blockworld.blocks.simple_block import SimpleBlock
 
 class TowerEncoder(json.JSONEncoder):
 
