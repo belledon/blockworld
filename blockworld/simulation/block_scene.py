@@ -173,7 +173,7 @@ class BlockScene:
         ob.name = 'base'
         ob.show_name = False
         ob.data.name = '{}_Mesh'.format('base')
-        self.scale_obj(ob, (20, 20, 1))
+        self.scale_obj(ob, (40, 40, 1))
         self.set_appearance(ob, 'Marble')
         bpy.ops.rigidbody.object_add(type='PASSIVE')
         bpy.ops.rigidbody.constraint_add(type='FIXED')
