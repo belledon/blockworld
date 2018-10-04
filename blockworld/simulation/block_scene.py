@@ -180,6 +180,7 @@ class BlockScene:
         # Set to deal with issues like jittering
         ob.rigid_body.use_margin = 1
         ob.rigid_body.collision_margin = 0.0
+        ob.rigid_body.collision_shape = 'CYLINDER'
         if self.wire_frame:
             ob.cycles_visibility.diffuse = False
             ob.hide = True
