@@ -14,6 +14,11 @@ from blockworld.simulation import substances
 from bpy.app.handlers import persistent
 @persistent
 def load_handler(dummy):
+   # do the deletes here now everything is properly loaded up
+    bpy.ops.object.select_all(action='DESELECT')
+    for ob in bpy.data.objects:
+        ob.select = True
+    result = bpy.ops.object.delete()
     print("Load Handler:", bpy.data.filepath)
 bpy.app.handlers.load_post.append(load_handler)
 #################################################
@@ -45,11 +50,11 @@ class BlockScene:
         self.phys_objs = []
 
         # Clear scene
-        bpy.ops.object.mode_set(mode='OBJECT')
-        bpy.ops.object.select_by_type(type='MESH')
-        bpy.ops.object.delete(use_global=False)
-        for item in bpy.data.meshes:
-            bpy.data.meshes.remove(item)
+        # bpy.ops.object.mode_set(mode='OBJECT')
+        # bpy.ops.object.select_by_type(type='MESH')
+        # bpy.ops.object.delete(use_global=False)
+        # for item in bpy.data.meshes:
+        #     bpy.data.meshes.remove(item)
 
         # Load materials and textures
         with Suppressor():
