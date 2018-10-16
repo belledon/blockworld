@@ -1,9 +1,12 @@
+importlib.import_module('bpy')
+importlib.invalidate_caches()
+import mathutils
+
 import os
 import sys
-import bpy
 import json
 import pprint
-import mathutils
+import importlib
 import numpy as np
 
 
@@ -11,22 +14,19 @@ from blockworld.simulation import substances
 
 #################################################
 # https://stackoverflow.com/questions/28075599/opening-blend-files-using-blenders-python-api
-from bpy.app.handlers import persistent
-@persistent
-def load_handler(dummy):
-   # do the deletes here now everything is properly loaded up
-    bpy.ops.object.select_all(action='DESELECT')
-    for ob in bpy.data.objects:
-        ob.select = True
-    result = bpy.ops.object.delete()
-    print("Load Handler:", bpy.data.filepath)
-bpy.app.handlers.load_post.append(load_handler)
+# from bpy.app.handlers import persistent
+# @persistent
+# def load_handler(dummy):
+#     print("Load Handler:", bpy.data.filepath)
+# bpy.app.handlers.load_post.append(load_handler)
 #################################################
 
 
 
 materials_path = os.path.dirname(os.path.realpath(__file__)) + '/materials.blend'
 
+import faulthandler
+faulthandler.enable()
 
 class BlockScene:
 
@@ -50,15 +50,17 @@ class BlockScene:
         self.phys_objs = []
 
         # Clear scene
-        # bpy.ops.object.mode_set(mode='OBJECT')
+
         # bpy.ops.object.select_by_type(type='MESH')
         # bpy.ops.object.delete(use_global=False)
         # for item in bpy.data.meshes:
         #     bpy.data.meshes.remove(item)
 
         # Load materials and textures
-        with Suppressor():
-            bpy.ops.wm.open_mainfile(filepath=materials_path)
+        # with Suppressor():
+        #     bpy.ops.wm.open_mainfile(filepath=materials_path)
+        bpy.ops.wm.open_mainfile(filepath=materials_path)
+
 
         bpy.context.scene.frame_set(1)
         bpy.context.scene.frame_end = frames + warmup
@@ -170,7 +172,7 @@ class BlockScene:
         """
         Creates the table on which the blocks will stand.
         """
-        bpy.ops.mesh.primitive_cylinder_add(
+        self.bpy.ops.mesh.primitive_cylinder_add(
             location = block['pos'],
             view_align=False,
             enter_editmode=False)
@@ -346,31 +348,31 @@ class BlockScene:
         """
         bpy.ops.wm.save_as_mainfile(filepath=out)
 
-# From https://stackoverflow.com/questions/11130156/suppress-stdout-stderr-print-from-python-functions
-class Suppressor(object):
-    '''
-    A context manager for doing a "deep suppression" of stdout and stderr in
-    Python, i.e. will suppress all print, even if the print originates in a
-    compiled C/Fortran sub-function.
-       This will not suppress raised exceptions, since exceptions are printed
-    to stderr just before a script exits, and after the context manager has
-    exited (at least, I think that is why it lets exceptions through).
-    '''
-    def __init__(self):
-        # Open a pair of null files
-        self.null_fds =  [os.open(os.devnull,os.O_RDWR) for x in range(2)]
-        # Save the actual stdout (1) and stderr (2) file descriptors.
-        self.save_fds = [os.dup(1), os.dup(2)]
+# # From https://stackoverflow.com/questions/11130156/suppress-stdout-stderr-print-from-python-functions
+# class Suppressor(object):
+#     '''
+#     A context manager for doing a "deep suppression" of stdout and stderr in
+#     Python, i.e. will suppress all print, even if the print originates in a
+#     compiled C/Fortran sub-function.
+#        This will not suppress raised exceptions, since exceptions are printed
+#     to stderr just before a script exits, and after the context manager has
+#     exited (at least, I think that is why it lets exceptions through).
+#     '''
+#     def __init__(self):
+#         # Open a pair of null files
+#         self.null_fds =  [os.open(os.devnull,os.O_RDWR) for x in range(2)]
+#         # Save the actual stdout (1) and stderr (2) file descriptors.
+#         self.save_fds = [os.dup(1), os.dup(2)]
 
-    def __enter__(self):
-        # Assign the null pointers to stdout and stderr.
-        os.dup2(self.null_fds[0],1)
-        os.dup2(self.null_fds[1],2)
+#     def __enter__(self):
+#         # Assign the null pointers to stdout and stderr.
+#         os.dup2(self.null_fds[0],1)
+#         os.dup2(self.null_fds[1],2)
 
-    def __exit__(self, *_):
-        # Re-assign the real stdout/stderr back to (1) and (2)
-        os.dup2(self.save_fds[0],1)
-        os.dup2(self.save_fds[1],2)
-        # Close all file descriptors
-        for fd in self.null_fds + self.save_fds:
-            os.close(fd)
+#     def __exit__(self, *_):
+#         # Re-assign the real stdout/stderr back to (1) and (2)
+#         os.dup2(self.save_fds[0],1)
+#         os.dup2(self.save_fds[1],2)
+#         # Close all file descriptors
+#         for fd in self.null_fds + self.save_fds:
+#             os.close(fd)
