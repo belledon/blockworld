@@ -1,6 +1,5 @@
 import numpy as np
 import networkx as nx
-from pyquaternion import Quaternion
 
 from blockworld.towers.simple_tower import SimpleTower
 from blockworld.blocks.simple_block import SimpleBlock

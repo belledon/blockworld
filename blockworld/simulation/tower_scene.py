@@ -1,5 +1,4 @@
 import numpy as np
-import pybullet as p
 
 class Loader:
 
@@ -7,27 +6,36 @@ class Loader:
     Interface for loading object data.
     """
 
-    def __call__(self, name, start):
+    def __call__(self, name, start, p):
 
-        if name == '0':
+        rot = p.getQuaternionFromEuler([0, 0, 0])
+        if name == 0:
             mesh = p.GEOM_CYLINDER
             col_id = p.createCollisionShape(mesh, radius = 40,
-                                            physClientId = pid)
-            rot = p.getQuaternionFromEuler(start['rot'])
+                                            # physClientId = pid
+            )
+            pos = [0,0,0]
             mass = 0
+            friction = 0.5
         else:
             mesh = p.GEOM_BOX
+            dims = np.array(start['dims']) / 2.0
             col_id = p.createCollisionShape(mesh,
-                                            halfExtents = start['dimensions'],
-                                            physClientId = pid)
-            mass = np.prod(start['dimensions']) * start['density']
-            rot = p.getQuaternionFromEuler(start['rot'])
+                                            halfExtents = dims,
+                                            # physClientId = pid)
+                                            )
+            pos = start['pos']
+            mass = np.prod(start['dims']) * start['substance']['density']
+            friction = start['substance']['friction']
 
         obj_id = p.createMultiBody(baseMass = 0,
                                    baseCollisionShapeIndex = col_id,
-                                   basePosition = [0,0,0],
+                                   basePosition = pos,
                                    baseOrientation = rot,
-                                   physClientId = pid)
+                                   # physClientId = pid,
+        )
+
+        p.changeDynamics(obj_id, -1, mass = mass, lateralFriction = friction)
 
         return obj_id
 
@@ -37,11 +45,9 @@ class TowerPhysics:
     Handles physics for block towers.
     """
 
-    def __init__(self, description, loaders):
-        self.physicsClient = p.connect(p.DIRECT)
-        p.setGravity(0,0,-10)
+    def __init__(self, tower_json, loader = Loader()):
         self.loader = loader
-        self.description = description
+        self.description = tower_json
 
     #-------------------------------------------------------------------------#
     # Attributes
@@ -54,6 +60,7 @@ class TowerPhysics:
     def loader(self, l):
         if not isinstance(l, Loader):
             raise TypeError('Loader has wrong type')
+        self._loader = l
 
 
     @property
@@ -62,12 +69,11 @@ class TowerPhysics:
 
     @world.setter
     def world(self, w):
-        if not isinstance(w, dict):
-            raise TypeError('World description must be a `dict`.')
         block_d = {}
-        for block_key in w:
-            start = w[block_key]
-            block_id = self.loaders(block_key, start)
+        for block in w:
+            start = block['data']
+            block_key = block['id']
+            block_id = self.loader(block_key, start, self.context)
             block_d[block_key] = block_id
 
         self._world = block_d
@@ -75,22 +81,46 @@ class TowerPhysics:
     #-------------------------------------------------------------------------#
     # Methods
 
-    def trace(self, frames, objects):
+    def __enter__(self):
+        import pybullet as p
+        self.context = p
+        self.physicsClient = p.connect(p.DIRECT)
+        self.world = self.description
+        return self
+
+    def __exit__(self, *args):
+        self.context.disconnect()
+        print('closed pybullet')
+
+    def get_trace(self, frames, objects):
         """
         Obtains world state for select frames.
         Currently returns the position of each rigid body.
         """
-        positions = np.array((len(frames), len(objects), 3))
-        rotations = np.array((len(frames), len(objects), 3))
+        results = []
+        self.context.setGravity(0,0,-10)
+        time_step = 100 # number of steps per second
+        self.context.setPhysicsEngineParameter(
+            fixedTimeStep = 1.0 / time_step,
+            numSolverIterations = 200,
+        )
+        for f in range(frames * time_step):
+            self.context.stepSimulation()
 
-        for c, obj in enumerate(objects):
-            if not obj in self.word.keys():
-                raise ValueError('Block {} not found'.format(obj))
+            if f % time_step != 0:
+                continue
+            positions = np.zeros((len(objects), 3))
+            rotations = np.zeros((len(objects), 4))
+            for c, obj in enumerate(objects):
+                # if not obj in self.world.keys():
+                #     raise ValueError('Block {} not found'.format(obj))
+                pos, rot = self.context.getBasePositionAndOrientation(obj)
+                positions[c] = np.asarray(pos).flatten()
+                rotations[c] = np.asarray(rot).flatten()
 
-            for f range(frames):
-                p.stepSimulation()
-                pos, rot = p.getBasePositionAndOrientation(obj)
-                positions[f,c] = pos
-                rotations[f,c] = p.getEulerFromQuaternion(rot)
+            results.append({'position' : positions, 'rotation' : rotations})
 
-        return {'positions' : positions, 'rotations' : rotations}
+        return results
+
+    #-------------------------------------------------------------------------#
+    # Helpers

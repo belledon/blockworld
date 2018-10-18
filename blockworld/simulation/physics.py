@@ -3,7 +3,7 @@ import pprint
 import numpy as np
 
 from blockworld import towers, blocks
-from blockworld.simulation import block_scene
+from blockworld.simulation import tower_scene
 
 class TowerEntropy:
 
@@ -25,9 +25,8 @@ class TowerEntropy:
         Controls simulations and extracts positions
         """
         tower_s = tower.serialize()
-        scene = block_scene.BlockScene(tower_s, frames = self.frames)
-        scene.bake_physics()
-        trace = scene.get_trace(frames = np.arange(self.frames))
+        with tower_scene.TowerPhysics(tower_s) as scene:
+            trace = scene.get_trace(self.frames, tower.blocks)
         return np.array([t['position'] for t in trace])
 
     def movement(self, positions, eps = 1E-3):
@@ -50,6 +49,7 @@ class TowerEntropy:
         positions = self.simulate(tower)
         positions = positions[:self.frames]
         # for each frame, for each object, 1 vel value
+        print(positions.shape)
         vel = np.mean(np.sum(velocity(positions), axis = 0), axis = 1)
         phys_params = tower.extract_feature('substance')
         density  = np.array([d['density'] for d in phys_params])
