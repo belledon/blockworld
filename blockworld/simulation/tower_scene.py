@@ -1,6 +1,5 @@
 import numpy as np
 import pybullet as p
-# import pybullet_data
 
 class Loader:
 
@@ -12,20 +11,23 @@ class Loader:
 
         if name == '0':
             mesh = p.GEOM_CYLINDER
-            col_id = p.createCollisionShape(mesh, radius = 40)
+            col_id = p.createCollisionShape(mesh, radius = 40,
+                                            physClientId = pid)
             rot = p.getQuaternionFromEuler(start['rot'])
             mass = 0
         else:
             mesh = p.GEOM_BOX
             col_id = p.createCollisionShape(mesh,
-                                            halfExtents = start['dimensions'])
+                                            halfExtents = start['dimensions'],
+                                            physClientId = pid)
             mass = np.prod(start['dimensions']) * start['density']
             rot = p.getQuaternionFromEuler(start['rot'])
 
         obj_id = p.createMultiBody(baseMass = 0,
                                    baseCollisionShapeIndex = col_id,
                                    basePosition = [0,0,0],
-                                   baseOrientation = rot)
+                                   baseOrientation = rot,
+                                   physClientId = pid)
 
         return obj_id
 
@@ -37,7 +39,6 @@ class TowerPhysics:
 
     def __init__(self, description, loaders):
         self.physicsClient = p.connect(p.DIRECT)
-        # p.setAdditionalSearchPath(pybullet_data.getDataPath()) #optionally
         p.setGravity(0,0,-10)
         self.loader = loader
         self.description = description

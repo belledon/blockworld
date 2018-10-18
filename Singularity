@@ -22,7 +22,7 @@ from: ubuntu:16.04
  setup.py /src/
  README.md /src/
  LICENSE /src/
- experiment /src/experiment
+ blockworld /src/blockworld
  mybin/* /mybin/
 
 %environment
@@ -40,7 +40,7 @@ from: ubuntu:16.04
 
 %post
  apt-get update
- apt-get install -y graphviz git wget python3-tk ffmpeg
+ apt-get install -y graphviz git wget python3-dev python3-tk ffmpeg python3-pip
  python3 -m pip install --upgrade pip
  python3 -m pip install numpy \
          scipy \
