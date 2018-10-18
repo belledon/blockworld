@@ -1,4 +1,5 @@
 import numpy as np
+import pybullet as p
 
 class Loader:
 
@@ -6,7 +7,7 @@ class Loader:
     Interface for loading object data.
     """
 
-    def __call__(self, name, start, p):
+    def __call__(self, name, start):
 
         rot = p.getQuaternionFromEuler([0, 0, 0])
         if name == 0:
@@ -73,7 +74,7 @@ class TowerPhysics:
         for block in w:
             start = block['data']
             block_key = block['id']
-            block_id = self.loader(block_key, start, self.context)
+            block_id = self.loader(block_key, start)
             block_d[block_key] = block_id
 
         self._world = block_d
@@ -82,14 +83,13 @@ class TowerPhysics:
     # Methods
 
     def __enter__(self):
-        import pybullet as p
-        self.context = p
+        # p = p
         self.physicsClient = p.connect(p.DIRECT)
         self.world = self.description
         return self
 
     def __exit__(self, *args):
-        self.context.disconnect()
+        p.disconnect()
         print('closed pybullet')
 
     def get_trace(self, frames, objects):
@@ -98,29 +98,32 @@ class TowerPhysics:
         Currently returns the position of each rigid body.
         """
         results = []
-        self.context.setGravity(0,0,-10)
+        p.setGravity(0,0,-10)
         time_step = 100 # number of steps per second
-        self.context.setPhysicsEngineParameter(
+        p.setPhysicsEngineParameter(
             fixedTimeStep = 1.0 / time_step,
             numSolverIterations = 200,
         )
+
+        positions = np.zeros((frames, len(objects), 3))
+        rotations = np.zeros((frames, len(objects), 4))
         for f in range(frames * time_step):
-            self.context.stepSimulation()
+            p.stepSimulation()
 
             if f % time_step != 0:
                 continue
-            positions = np.zeros((len(objects), 3))
-            rotations = np.zeros((len(objects), 4))
             for c, obj in enumerate(objects):
                 # if not obj in self.world.keys():
                 #     raise ValueError('Block {} not found'.format(obj))
-                pos, rot = self.context.getBasePositionAndOrientation(obj)
-                positions[c] = np.asarray(pos).flatten()
-                rotations[c] = np.asarray(rot).flatten()
+                pos, rot = p.getBasePositionAndOrientation(obj)
+                frame = int(f / time_step)
+                positions[frame, c] = np.asarray(pos).flatten()
+                rotations[frame, c] = np.asarray(rot).flatten()
 
-            results.append({'position' : positions, 'rotation' : rotations})
+        result = {'position' : positions, 'rotation' : rotations}
+        print(result['position'])
+        return result
 
-        return results
 
     #-------------------------------------------------------------------------#
     # Helpers

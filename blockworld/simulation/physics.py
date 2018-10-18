@@ -25,9 +25,10 @@ class TowerEntropy:
         Controls simulations and extracts positions
         """
         tower_s = tower.serialize()
+        keys = list(tower.blocks.keys())[1:]
         with tower_scene.TowerPhysics(tower_s) as scene:
-            trace = scene.get_trace(self.frames, tower.blocks)
-        return np.array([t['position'] for t in trace])
+            trace = scene.get_trace(self.frames, keys)
+        return trace['position']
 
     def movement(self, positions, eps = 1E-3):
         vel = velocity(positions)
@@ -49,15 +50,14 @@ class TowerEntropy:
         positions = self.simulate(tower)
         positions = positions[:self.frames]
         # for each frame, for each object, 1 vel value
-        print(positions.shape)
-        vel = np.mean(np.sum(velocity(positions), axis = 0), axis = 1)
+        vel = velocity(positions).mean(axis = -1)
         phys_params = tower.extract_feature('substance')
         density  = np.array([d['density'] for d in phys_params])
         volume = np.array([np.prod(tower.blocks[i+1]['block'].dimensions)
                            for i in range(len(tower))])
-        mass = density * volume
+        mass = np.expand_dims(density * volume, axis = -1)
         # sum the vel^2 for each object across frames
-        ke = 0.5 * mass * np.square(vel)
+        ke = 0.5 * np.dot(np.square(vel), mass).flatten()
         return np.sum(ke)
 
     def analyze(self, tower):
