@@ -1,5 +1,6 @@
 import numpy as np
 import pybullet as p
+from pprint import pprint
 
 class Loader:
 
@@ -13,7 +14,6 @@ class Loader:
         if name == 0:
             mesh = p.GEOM_CYLINDER
             col_id = p.createCollisionShape(mesh, radius = 40,
-                                            # physClientId = pid
             )
             pos = [0,0,0]
             mass = 0
@@ -23,20 +23,13 @@ class Loader:
             dims = np.array(start['dims']) / 2.0
             col_id = p.createCollisionShape(mesh,
                                             halfExtents = dims,
-                                            # physClientId = pid)
                                             )
             pos = start['pos']
             mass = np.prod(start['dims']) * start['substance']['density']
             friction = start['substance']['friction']
 
-        obj_id = p.createMultiBody(baseMass = 0,
-                                   baseCollisionShapeIndex = col_id,
-                                   basePosition = pos,
-                                   baseOrientation = rot,
-                                   # physClientId = pid,
-        )
-
-        p.changeDynamics(obj_id, -1, mass = mass, lateralFriction = friction)
+        obj_id = p.createMultiBody(mass, col_id, -1, pos, rot)
+        p.changeDynamics(obj_id, -1, lateralFriction = friction)
 
         return obj_id
 
@@ -83,21 +76,23 @@ class TowerPhysics:
     # Methods
 
     def __enter__(self):
-        # p = p
         self.physicsClient = p.connect(p.DIRECT)
+        p.resetSimulation()
         self.world = self.description
         return self
 
     def __exit__(self, *args):
         p.disconnect()
-        print('closed pybullet')
 
     def get_trace(self, frames, objects):
         """
         Obtains world state for select frames.
         Currently returns the position of each rigid body.
         """
-        results = []
+        for obj in objects:
+            if not obj in self.world.keys():
+                raise ValueError('Block {} not found'.format(obj))
+
         p.setGravity(0,0,-10)
         time_step = 100 # number of steps per second
         p.setPhysicsEngineParameter(
@@ -113,15 +108,13 @@ class TowerPhysics:
             if f % time_step != 0:
                 continue
             for c, obj in enumerate(objects):
-                # if not obj in self.world.keys():
-                #     raise ValueError('Block {} not found'.format(obj))
-                pos, rot = p.getBasePositionAndOrientation(obj)
+                obj_id = self.world[obj]
+                pos, rot = p.getBasePositionAndOrientation(obj_id)
                 frame = int(f / time_step)
                 positions[frame, c] = np.asarray(pos).flatten()
                 rotations[frame, c] = np.asarray(rot).flatten()
 
         result = {'position' : positions, 'rotation' : rotations}
-        print(result['position'])
         return result
 
 
