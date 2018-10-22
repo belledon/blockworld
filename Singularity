@@ -8,6 +8,16 @@ from: base.simg
  fi
  mkdir ${SINGULARITY_ROOTFS}/src
 
+%environment
+ export PATH=$PATH:/mybin/:/blender/blender
+ export LANG=en_US.UTF-8
+ export TMPDIR=$PWD/.tmp
+
+ if [ -d ${PWD}/.tmp ];then
+    rm -rf ${PWD}/.tmp
+ fi
+ mkdir ${PWD}/.tmp
+
 %files
  setup.py /src/
  README.md /src/

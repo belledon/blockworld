@@ -6,20 +6,21 @@ from: ubuntu:16.04
     rm -r ${SINGULARITY_ROOTFS}/deps
  fi
 
- mkdir ${SINGULARITY_ROOTFS}/src
-
  if [ -d ${SINGULARITY_ROOTFS}/mybin ];then
     rm -r ${SINGULARITY_ROOTFS}/mybin
  fi
  mkdir ${SINGULARITY_ROOTFS}/mybin
 
+ if [ -d ${SINGULARITY_ROOTFS}/blender ];then
+     rm -r ${SINGULARITY_ROOTFS}/blender
+ fi
 
 %files
  deps /deps
  mybin/* /mybin/
 
 %environment
- export PATH=$PATH:/mybin/
+ export PATH=$PATH:/mybin/:/blender/blender
  export LANG=en_US.UTF-8
  export TMPDIR=$PWD/.tmp
 
@@ -33,7 +34,16 @@ from: ubuntu:16.04
 
 %post
  apt-get update
- apt-get install -y graphviz git wget python3-dev python3-tk ffmpeg python3-pip
+ apt-get install -y graphviz \
+         git \
+         wget \
+         python3-dev \
+         python3-tk \
+         ffmpeg \
+         python3-pip \
+         libglu1 \
+         libxi6
+
  python3 -m pip install --upgrade pip
  python3 -m pip install numpy \
          scipy \
@@ -50,5 +60,13 @@ from: ubuntu:16.04
          "dask[complete]" \
          pybullet
 
+ ls /deps
  python3 -m pip install -e /deps/dask-jobqueue
  chmod +x /mybin/*
+
+ wget "https://builder.blender.org/download/blender-2.79-de3f9303eb9-linux-glibc224-x86_64.tar.bz2"
+ tar xvjf blender-2.79-de3f9303eb9-linux-glibc224-x86_64.tar.bz2
+ rm *.tar.bz2
+ mv blender-2.79-de3f9303eb9-linux-glibc224-x86_64 /blender
+ chmod +x blender/blender
+

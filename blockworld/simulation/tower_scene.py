@@ -1,6 +1,5 @@
 import numpy as np
 import pybullet as p
-from pprint import pprint
 
 class Loader:
 
@@ -12,8 +11,9 @@ class Loader:
 
         rot = p.getQuaternionFromEuler([0, 0, 0])
         if name == 0:
-            mesh = p.GEOM_CYLINDER
-            col_id = p.createCollisionShape(mesh, radius = 40,
+            mesh = p.GEOM_PLANE
+            col_id = p.createCollisionShape(mesh,
+                                            # planeNormal = [0, 0, 1],
             )
             pos = [0,0,0]
             mass = 0
@@ -84,7 +84,7 @@ class TowerPhysics:
     def __exit__(self, *args):
         p.disconnect()
 
-    def get_trace(self, frames, objects):
+    def get_trace(self, frames, objects, fps = 60):
         """
         Obtains world state for select frames.
         Currently returns the position of each rigid body.
@@ -94,7 +94,7 @@ class TowerPhysics:
                 raise ValueError('Block {} not found'.format(obj))
 
         p.setGravity(0,0,-10)
-        time_step = 100 # number of steps per second
+        time_step = 240 # number of steps per second
         p.setPhysicsEngineParameter(
             fixedTimeStep = 1.0 / time_step,
             numSolverIterations = 200,
@@ -102,15 +102,25 @@ class TowerPhysics:
 
         positions = np.zeros((frames, len(objects), 3))
         rotations = np.zeros((frames, len(objects), 4))
-        for f in range(frames * time_step):
+        # for frame in range(frames):
+        #     p.stepSimulation()
+        #     for c, obj in enumerate(objects):
+        #         obj_id = self.world[obj]
+        #         pos, rot = p.getBasePositionAndOrientation(obj_id)
+        #         # frame = int(f / time_step)
+        #         positions[frame, c] = np.asarray(pos).flatten()
+        #         rotations[frame, c] = np.asarray(rot).flatten()
+        phys_step_per_frame = int(time_step / fps)
+        dur = phys_step_per_frame * frames
+        for f in range(dur):
             p.stepSimulation()
 
-            if f % time_step != 0:
+            if f % phys_step_per_frame != 0:
                 continue
             for c, obj in enumerate(objects):
                 obj_id = self.world[obj]
                 pos, rot = p.getBasePositionAndOrientation(obj_id)
-                frame = int(f / time_step)
+                frame = int(f / phys_step_per_frame)
                 positions[frame, c] = np.asarray(pos).flatten()
                 rotations[frame, c] = np.asarray(rot).flatten()
 
