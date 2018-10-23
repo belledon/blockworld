@@ -291,7 +291,7 @@ class BlockScene:
         n = int(dur * bpy.context.scene.render.fps)
         rots = np.linspace(0, 360, n)
         if freeze == True:
-            frames = np.zeros(n)
+            frames = np.zeros(n).astype(int)
         else:
             frames = np.arange(n)
 
