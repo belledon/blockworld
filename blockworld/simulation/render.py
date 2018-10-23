@@ -271,8 +271,11 @@ class BlockScene:
             camera_rot = np.zeros(len(frames))
         for i, (frame, cam) in enumerate(zip(frames, camera_rot)):
             out = os.path.join(output_name, '{0:d}'.format(i))
-            self.set_camera(cam)
+            if os.path.isfile(out + '.png'):
+                print('Frame {} already rendered'.format(frame))
+                continue
             bpy.context.scene.render.filepath = out
+            self.set_camera(cam)
             self.frame_set(frame)
             bpy.ops.render.render(write_still=True)
 
