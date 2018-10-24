@@ -13,7 +13,6 @@ class Loader:
         if name == 0:
             mesh = p.GEOM_PLANE
             col_id = p.createCollisionShape(mesh,
-                                            # planeNormal = [0, 0, 1],
             )
             pos = [0,0,0]
             mass = 0
@@ -84,7 +83,7 @@ class TowerPhysics:
     def __exit__(self, *args):
         p.disconnect()
 
-    def get_trace(self, frames, objects, fps = 60):
+    def get_trace(self, frames, objects, time_step = 120, fps = 60):
         """
         Obtains world state for select frames.
         Currently returns the position of each rigid body.
@@ -94,24 +93,17 @@ class TowerPhysics:
                 raise ValueError('Block {} not found'.format(obj))
 
         p.setGravity(0,0,-10)
-        time_step = 240 # number of steps per second
         p.setPhysicsEngineParameter(
             fixedTimeStep = 1.0 / time_step,
             numSolverIterations = 200,
+            enableConeFriction = 0,
         )
 
         positions = np.zeros((frames, len(objects), 3))
         rotations = np.zeros((frames, len(objects), 4))
-        # for frame in range(frames):
-        #     p.stepSimulation()
-        #     for c, obj in enumerate(objects):
-        #         obj_id = self.world[obj]
-        #         pos, rot = p.getBasePositionAndOrientation(obj_id)
-        #         # frame = int(f / time_step)
-        #         positions[frame, c] = np.asarray(pos).flatten()
-        #         rotations[frame, c] = np.asarray(rot).flatten()
-        phys_step_per_frame = int(time_step / fps)
-        dur = phys_step_per_frame * frames
+
+        phys_step_per_frame = time_step / fps
+        dur = int(phys_step_per_frame * frames)
         for f in range(dur):
             p.stepSimulation()
 

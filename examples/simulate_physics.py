@@ -42,6 +42,8 @@ def render(scene, trace, out):
         scene_s,
         '--trace',
         trace_s,
+        '--render_mode',
+        'none'
     ]
     # _cmd = shlex.split(cmd.format(render_path, scene_s, trace_s, out))
     # _cmd = ['/blender/blender',

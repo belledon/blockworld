@@ -15,25 +15,6 @@ def load_handler(dummy):
     print("Load Handler:", bpy.data.filepath)
 bpy.app.handlers.load_post.append(load_handler)
 #################################################
-def parser(args):
-
-    p = argparse.ArgumentParser(description = 'Renders blockworld scene')
-    p.add_argument('--scene', type = json.loads,
-                   help = 'Tower json describing the scene.')
-    p.add_argument('--trace', type = json.loads,
-                   help = 'Trace json for physics.')
-    p.add_argument('--out', type = str,
-                   help = 'Path to save rendering')
-    p.add_argument('--wireframe', action = 'store_true',
-                   help = 'Render objects as wireframes')
-    p.add_argument('--save_world', action = 'store_true',
-                   help = 'Save the resulting blend scene')
-    p.add_argument('--render_mode', type = str, default = 'default',
-                   choices = ['default'],
-                   help = 'mode to render')
-    p.add_argument('--resolution', type = int, nargs = 2,
-                   default = (256,256),  help = 'Render resolution')
-    return p.parse_args(args)
 
 class BlockScene:
 
@@ -91,7 +72,7 @@ class BlockScene:
         """
         self.select_obj(obj)
         obj.rotation_mode = 'QUATERNION'
-        obj.rotation_quaternion = rot
+        obj.rotation_quaternion = np.roll(rot, 1) # [3, 0, 1, 2]
         bpy.context.scene.update()
 
     def move_obj(self, obj, pos):
@@ -100,12 +81,8 @@ class BlockScene:
         """
         self.select_obj(obj)
         pos = mathutils.Vector(pos)
-        # print(obj.name, 'OLD POS', obj.location)
-        # obj.data.transform(mathutils.Matrix.Translation(-pos))
-        # obj.matrix_world.translation += pos
         obj.location = pos
         bpy.context.scene.update()
-        print(obj.name, 'NEW POS', obj.location)
 
     def scale_obj(self, obj, dims):
         """
@@ -335,6 +312,28 @@ class Suppressor(object):
         # Close all file descriptors
         for fd in self.null_fds + self.save_fds:
             os.close(fd)
+
+def parser(args):
+
+    p = argparse.ArgumentParser(description = 'Renders blockworld scene')
+    p.add_argument('--scene', type = json.loads,
+                   help = 'Tower json describing the scene.')
+    p.add_argument('--trace', type = json.loads,
+                   help = 'Trace json for physics.')
+    p.add_argument('--out', type = str,
+                   help = 'Path to save rendering')
+    p.add_argument('--wireframe', action = 'store_true',
+                   help = 'Render objects as wireframes')
+    p.add_argument('--save_world', action = 'store_true',
+                   help = 'Save the resulting blend scene')
+    p.add_argument('--render_mode', type = str, default = 'default',
+                   choices = ['default', 'motion', 'frozen', 'none'],
+                   help = 'mode to render')
+    p.add_argument('--resolution', type = int, nargs = 2,
+                   default = (256,256),  help = 'Render resolution')
+    return p.parse_args(args)
+
+
 def main():
     argv = sys.argv
     print(argv[:6])
@@ -344,19 +343,22 @@ def main():
 
     scene = BlockScene(args.scene, args.trace, wire_frame = args.wireframe)
 
+    path = os.path.join(args.out, 'render')
+    if not os.path.isdir(path):
+        os.mkdir(path)
 
-    if args.render_mode == 'default':
-        path = os.path.join(args.out, 'render')
-        if not os.path.isdir(path):
-            os.mkdir(path)
-
-        frozen_path = os.path.join(path, 'frozen')
+    frozen_path = os.path.join(path, 'frozen')
+    motion_path = os.path.join(path, 'motion')
+    n_frames = len(args.trace['position'])
+    if args.render_mode == 'default' or args.render_mode == 'frozen':
         scene.render_circle(frozen_path, freeze = True, dur = 2,
                             resolution = args.resolution)
-        n_frames = len(args.trace['position'])
-        motion_path = os.path.join(path, 'motion')
+    elif args.render_mode == 'default' or args.render_mode == 'motion':
         scene.render(motion_path, np.arange(n_frames),
                      resolution = args.resolution)
+    elif args.render_mode == 'none':
+        for frame in range(n_frames):
+            scene.frame_set(frame)
 
     if args.save_world:
         path = os.path.join(args.out, 'world.blend')
