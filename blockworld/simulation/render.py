@@ -353,10 +353,10 @@ def main():
     if args.render_mode == 'default' or args.render_mode == 'frozen':
         scene.render_circle(frozen_path, freeze = True, dur = 2,
                             resolution = args.resolution)
-    elif args.render_mode == 'default' or args.render_mode == 'motion':
+    if args.render_mode == 'default' or args.render_mode == 'motion':
         scene.render(motion_path, np.arange(n_frames),
                      resolution = args.resolution)
-    elif args.render_mode == 'none':
+    if args.render_mode == 'none':
         for frame in range(n_frames):
             scene.frame_set(frame)
 
