@@ -7,13 +7,12 @@ class Loader:
     Interface for loading object data.
     """
 
-    def __call__(self, name, start):
+    def __call__(self, name, start, p_id):
 
         rot = p.getQuaternionFromEuler([0, 0, 0])
         if name == 0:
             mesh = p.GEOM_PLANE
-            col_id = p.createCollisionShape(mesh,
-            )
+            col_id = p.createCollisionShape(mesh, physicsClientId = p_id)
             pos = [0,0,0]
             mass = 0
             friction = 0.5
@@ -22,13 +21,16 @@ class Loader:
             dims = np.array(start['dims']) / 2.0
             col_id = p.createCollisionShape(mesh,
                                             halfExtents = dims,
+                                            physicsClientId = p_id
                                             )
             pos = start['pos']
             mass = np.prod(start['dims']) * start['substance']['density']
             friction = start['substance']['friction']
 
-        obj_id = p.createMultiBody(mass, col_id, -1, pos, rot)
-        p.changeDynamics(obj_id, -1, lateralFriction = friction)
+        obj_id = p.createMultiBody(mass, col_id, -1, pos, rot,
+                                   physicsClientId = p_id)
+        p.changeDynamics(obj_id, -1, lateralFriction = friction,
+                         physicsClientId = p_id)
 
         return obj_id
 
@@ -62,11 +64,12 @@ class TowerPhysics:
 
     @world.setter
     def world(self, w):
+        p_id = self.physicsClient
         block_d = {}
         for block in w:
             start = block['data']
             block_key = block['id']
-            block_id = self.loader(block_key, start)
+            block_id = self.loader(block_key, start, p_id)
             block_d[block_key] = block_id
 
         self._world = block_d
@@ -92,11 +95,13 @@ class TowerPhysics:
             if not obj in self.world.keys():
                 raise ValueError('Block {} not found'.format(obj))
 
-        p.setGravity(0,0,-10)
+        p_id = self.physicsClient
+        p.setGravity(0,0,-10, physicsClientId = p_id)
         p.setPhysicsEngineParameter(
             fixedTimeStep = 1.0 / time_step,
             numSolverIterations = 200,
             enableConeFriction = 0,
+            physicsClientId = p_id
         )
 
         positions = np.zeros((frames, len(objects), 3))
@@ -111,7 +116,7 @@ class TowerPhysics:
                 continue
             for c, obj in enumerate(objects):
                 obj_id = self.world[obj]
-                pos, rot = p.getBasePositionAndOrientation(obj_id)
+                pos, rot = p.getBasePositionAndOrientation(obj_id, physicsClientId = p_id)
                 frame = int(f / phys_step_per_frame)
                 positions[frame, c] = np.asarray(pos).flatten()
                 rotations[frame, c] = np.asarray(rot).flatten()
