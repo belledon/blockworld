@@ -110,7 +110,7 @@ class TowerPhysics:
         phys_step_per_frame = time_step / fps
         dur = int(phys_step_per_frame * frames)
         for f in range(dur):
-            p.stepSimulation()
+            p.stepSimulation(physicsClientId = p_id)
 
             if f % phys_step_per_frame != 0:
                 continue
