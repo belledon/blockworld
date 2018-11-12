@@ -83,7 +83,7 @@ def main():
     # if not os.path.isdir(out):
     #     os.mkdir(out)
 
-    cluster = distributed.LocalCluster( n_workers = 4, threads_per_worker = 1)
+    cluster = distributed.LocalCluster( n_workers = 4, threads_per_worker = 2)
     print(cluster.dashboard_link)
     client = distributed.Client(cluster)
 

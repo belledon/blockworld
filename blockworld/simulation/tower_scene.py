@@ -1,5 +1,6 @@
 import numpy as np
-import pybullet as p
+import pybullet
+import pybullet_utils.bullet_client as bc
 
 class Loader:
 
@@ -7,12 +8,12 @@ class Loader:
     Interface for loading object data.
     """
 
-    def __call__(self, name, start, p_id):
+    def __call__(self, name, start, p):
 
         rot = p.getQuaternionFromEuler([0, 0, 0])
         if name == 0:
             mesh = p.GEOM_PLANE
-            col_id = p.createCollisionShape(mesh, physicsClientId = p_id)
+            col_id = p.createCollisionShape(mesh)
             pos = [0,0,0]
             mass = 0
             friction = 0.5
@@ -21,16 +22,13 @@ class Loader:
             dims = np.array(start['dims']) / 2.0
             col_id = p.createCollisionShape(mesh,
                                             halfExtents = dims,
-                                            physicsClientId = p_id
                                             )
             pos = start['pos']
             mass = np.prod(start['dims']) * start['substance']['density']
             friction = start['substance']['friction']
 
-        obj_id = p.createMultiBody(mass, col_id, -1, pos, rot,
-                                   physicsClientId = p_id)
-        p.changeDynamics(obj_id, -1, lateralFriction = friction,
-                         physicsClientId = p_id)
+        obj_id = p.createMultiBody(mass, col_id, -1, pos, rot)
+        p.changeDynamics(obj_id, -1, lateralFriction = friction)
 
         return obj_id
 
@@ -64,12 +62,12 @@ class TowerPhysics:
 
     @world.setter
     def world(self, w):
-        p_id = self.physicsClient
+        p = self.physicsClient
         block_d = {}
         for block in w:
             start = block['data']
             block_key = block['id']
-            block_id = self.loader(block_key, start, p_id)
+            block_id = self.loader(block_key, start, p)
             block_d[block_key] = block_id
 
         self._world = block_d
@@ -78,13 +76,15 @@ class TowerPhysics:
     # Methods
 
     def __enter__(self):
-        self.physicsClient = p.connect(p.DIRECT)
+        p = bc.BulletClient(connection_mode=pybullet.DIRECT)
         p.resetSimulation()
+        self.physicsClient = p
         self.world = self.description
         return self
 
     def __exit__(self, *args):
-        p.disconnect(self.physicsClient)
+        self.physicsClient.disconnect()
+        self.physicsClient = None
 
     def get_trace(self, frames, objects, time_step = 120, fps = 60):
         """
@@ -95,13 +95,12 @@ class TowerPhysics:
             if not obj in self.world.keys():
                 raise ValueError('Block {} not found'.format(obj))
 
-        p_id = self.physicsClient
-        p.setGravity(0,0,-10, physicsClientId = p_id)
+        p = self.physicsClient
+        p.setGravity(0,0,-10)
         p.setPhysicsEngineParameter(
             fixedTimeStep = 1.0 / time_step,
             numSolverIterations = 200,
             enableConeFriction = 0,
-            physicsClientId = p_id
         )
 
         positions = np.zeros((frames, len(objects), 3))
@@ -110,20 +109,16 @@ class TowerPhysics:
         phys_step_per_frame = time_step / fps
         dur = int(phys_step_per_frame * frames)
         for f in range(dur):
-            p.stepSimulation(physicsClientId = p_id)
+            p.stepSimulation()
 
             if f % phys_step_per_frame != 0:
                 continue
             for c, obj in enumerate(objects):
                 obj_id = self.world[obj]
-                pos, rot = p.getBasePositionAndOrientation(obj_id, physicsClientId = p_id)
+                pos, rot = p.getBasePositionAndOrientation(obj_id)
                 frame = int(f / phys_step_per_frame)
-                positions[frame, c] = np.asarray(pos).flatten()
-                rotations[frame, c] = np.asarray(rot).flatten()
+                positions[frame, c] = np.array(pos).flatten()
+                rotations[frame, c] = np.array(rot).flatten()
 
         result = {'position' : positions, 'rotation' : rotations}
         return result
-
-
-    #-------------------------------------------------------------------------#
-    # Helpers

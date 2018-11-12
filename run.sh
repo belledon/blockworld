@@ -14,7 +14,7 @@ export PYTHONPATH=$ROOT
 SCRIPT="$1"
 shift
 
-CONT="${ROOT}/singularity/env.simg"
+CONT="${ROOT}/env.simg"
 
 singularity exec -B "/$BASE:/$BASE" $CONT $SCRIPT "$@"
 

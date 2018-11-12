@@ -25,4 +25,5 @@ from: base.simg
  blockworld /src/blockworld
 
 %post
+ python3 -m pip install bokeh
  python3 -m pip install -e /src
