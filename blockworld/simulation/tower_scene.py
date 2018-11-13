@@ -83,7 +83,7 @@ class TowerPhysics:
         return self
 
     def __exit__(self, *args):
-        self.physicsClient.disconnect()
+        del self.physicsClient
         self.physicsClient = None
 
     def get_trace(self, frames, objects, time_step = 120, fps = 60):
