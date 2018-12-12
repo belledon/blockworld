@@ -1,3 +1,0 @@
-[submodule "deps/dask-jobqueue"]
-	path = deps/dask-jobqueue
-	url = https://github.com/dask/dask-jobqueue.git
