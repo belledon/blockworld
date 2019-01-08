@@ -59,6 +59,11 @@ class SimpleTower(Tower):
         return self.graph.nodes
 
     @property
+    def ordered_blocks(self):
+        keys = np.arange(1, len(self.blocks.keys()))
+        return keys
+
+    @property
     def graph(self):
         return self._graph
 
