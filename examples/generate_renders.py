@@ -14,11 +14,9 @@ import pprint
 import argparse
 import numpy as np
 
-# from config import Config
 from blockworld.simulation import block_scene
 from blockworld.simulation.generator import Generator
 
-# CONFIG = Config()
 
 def simulate_tower(tower, path):
     """
@@ -48,15 +46,11 @@ def main():
 
     args = parser.parse_args()
 
-    # src = os.path.join(CONFIG['data'], args.src)
-    # out = os.path.join(CONFIG['data'], '{0!s}_rendered'.format(args.src))
-    src = args.src
     out = '{0!s}_rendered'.format(args.src)
-
     if not os.path.isdir(out):
         os.mkdir(out)
 
-    for tower_j in glob.glob(os.path.join(src, '*.json')):
+    for tower_j in glob.glob(os.path.join(args.src, '*.json')):
         tower_name = os.path.splitext(os.path.basename(tower_j))[0]
         tower_base = os.path.join(out, tower_name)
         if not os.path.isdir(tower_base):

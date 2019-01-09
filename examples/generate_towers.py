@@ -11,11 +11,9 @@ import argparse
 import numpy as np
 import networkx as nx
 
-# from config import Config
 from blockworld import towers
 from blockworld.simulation.generator import Generator
 
-# CONFIG = Config()
 
 def main():
     parser = argparse.ArgumentParser(
@@ -28,7 +26,6 @@ def main():
                         help = 'Path to base tower.')
 
     args = parser.parse_args()
-    # out_d = os.path.join(CONFIG['data'], args.out)
     out_d = args.out
 
     if args.base is None:
