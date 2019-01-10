@@ -73,11 +73,15 @@ class SimpleBlock(Block):
         of the block.
         """
         # get the two xy planes in a clockwise order
-        clock = [2,1,0,3]
-        top = self.mat[:4, :2][clock].tolist()
-        # must envelope to make valid rectangle
-        plane = geometry.Polygon((top + top[:1])).envelope
-        return plane
+        clock = [2,0,1,3]
+        ext = self.mat[:4, :2][clock].tolist()
+        return geometry.Polygon(ext)
+        # # must envelope to make valid rectangle
+        # print(top)
+        # raise ValueError()
+        # ext = []
+        # plane = geometry.Polygon((top + top[:1])).envelope
+        # return plane
 
     @property
     def com(self):
