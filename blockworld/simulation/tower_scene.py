@@ -32,18 +32,18 @@ class Loader:
 
         return obj_id
 
+default_loader = Loader()
+
 class TowerPhysics:
 
     """
     Handles physics for block towers.
     """
 
-    def __init__(self, tower_json, loader = Loader()):
+    def __init__(self, tower_json, loader = default_loader):
         self.loader = loader
-        self.description = tower_json
-        p = bc.BulletClient(connection_mode=pybullet.DIRECT)
-        p.resetSimulation()
-        self.physicsClient = p
+        self.client = bc.BulletClient(connection_mode=pybullet.DIRECT)
+        self.world = tower_json
 
     #-------------------------------------------------------------------------#
     # Attributes
@@ -65,12 +65,12 @@ class TowerPhysics:
 
     @world.setter
     def world(self, w):
-        p = self.physicsClient
+        self.client.resetSimulation()
         block_d = {}
         for block in w:
             start = block['data']
             block_key = block['id']
-            block_id = self.loader(block_key, start, p)
+            block_id = self.loader(block_key, start, self.client)
             block_d[block_key] = block_id
 
         self._world = block_d
@@ -78,17 +78,15 @@ class TowerPhysics:
     #-------------------------------------------------------------------------#
     # Methods
 
-    def __enter__(self):
-        # p = bc.BulletClient(connection_mode=pybullet.DIRECT)
-        # self.physicsClient.resetSimulation()
-        # self.physicsClient = p
-        self.world = self.description
-        return self
+    # def __enter__(self):
+    #     self.client.resetSimulation()
+    #     self.world = self.description
+    #     return self
 
-    def __exit__(self, *args):
-        # del self.physicsClient
-        # self.physicsClient = None
-        self.physicsClient.resetSimulation()
+    # def __exit__(self, *args):
+    #     del self.client
+    #     self.client = None
+    #     # self.physicsClient = None
 
     def get_trace(self, frames, objects, time_step = 120, fps = 60):
         """Obtains world state from simulation.
@@ -106,7 +104,7 @@ class TowerPhysics:
             if not obj in self.world.keys():
                 raise ValueError('Block {} not found'.format(obj))
 
-        p = self.physicsClient
+        p = self.client
         p.setGravity(0,0,-10)
         p.setPhysicsEngineParameter(
             fixedTimeStep = 1.0 / time_step,
@@ -118,16 +116,16 @@ class TowerPhysics:
         rotations = np.zeros((frames, len(objects), 4))
 
         steps_per_frame = int(time_step / fps)
-        dur = int(max(1, ((frames / fps) * time_step)))
-        for f in range(dur):
+        total_steps = int(max(1, ((frames / fps) * time_step)))
+        for step in range(total_steps):
             p.stepSimulation()
 
-            if f % steps_per_frame != 0:
+            if step % steps_per_frame != 0:
                 continue
             for c, obj in enumerate(objects):
                 obj_id = self.world[obj]
                 pos, rot = p.getBasePositionAndOrientation(obj_id)
-                frame = int(f / steps_per_frame)
+                frame = np.floor(step / steps_per_frame).astype(int)
                 positions[frame, c] = np.array(pos).flatten()
                 rotations[frame, c] = np.array(rot).flatten()
 
