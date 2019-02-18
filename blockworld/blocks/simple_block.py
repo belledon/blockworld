@@ -76,12 +76,6 @@ class SimpleBlock(Block):
         clock = [2,0,1,3]
         ext = self.mat[:4, :2][clock].tolist()
         return geometry.Polygon(ext)
-        # # must envelope to make valid rectangle
-        # print(top)
-        # raise ValueError()
-        # ext = []
-        # plane = geometry.Polygon((top + top[:1])).envelope
-        # return plane
 
     @property
     def com(self):
@@ -135,8 +129,8 @@ class SimpleBlock(Block):
         Serializes the attributes of the block to `dict`.
         """
         d = {
-            'dims' : list(self.dimensions.astype(float)),
-            'pos'  : list(self.pos.astype(float)),
+            'dims' : self.dimensions.astype(float).tolist(),
+            'pos'  : self.pos.astype(float).tolist(),
         }
         return d
 

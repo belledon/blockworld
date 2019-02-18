@@ -104,6 +104,8 @@ class TowerPhysics:
             if not obj in self.world.keys():
                 raise ValueError('Block {} not found'.format(obj))
 
+        object_ids = [self.world[obj] for obj in objects]
+
         p = self.client
         p.setGravity(0,0,-10)
         p.setPhysicsEngineParameter(
@@ -122,12 +124,11 @@ class TowerPhysics:
 
             if step % steps_per_frame != 0:
                 continue
-            for c, obj in enumerate(objects):
-                obj_id = self.world[obj]
+            for c, obj_id in enumerate(object_ids):
                 pos, rot = p.getBasePositionAndOrientation(obj_id)
                 frame = np.floor(step / steps_per_frame).astype(int)
-                positions[frame, c] = np.array(pos).flatten()
-                rotations[frame, c] = np.array(rot).flatten()
+                positions[frame, c] = pos
+                rotations[frame, c] = rot
 
         result = {'position' : positions, 'rotation' : rotations}
         return result
