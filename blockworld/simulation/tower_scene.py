@@ -29,7 +29,6 @@ class Loader:
 
         obj_id = p.createMultiBody(mass, col_id, -1, pos, rot)
         p.changeDynamics(obj_id, -1, lateralFriction = friction)
-
         return obj_id
 
 default_loader = Loader()
@@ -78,17 +77,7 @@ class TowerPhysics:
     #-------------------------------------------------------------------------#
     # Methods
 
-    # def __enter__(self):
-    #     self.client.resetSimulation()
-    #     self.world = self.description
-    #     return self
-
-    # def __exit__(self, *args):
-    #     del self.client
-    #     self.client = None
-    #     # self.physicsClient = None
-
-    def get_trace(self, frames, objects, time_step = 120, fps = 60):
+    def get_trace(self, frames, objects, time_step = 240, fps = 60):
         """Obtains world state from simulation.
 
         Currently returns the position of each rigid body.
@@ -103,16 +92,19 @@ class TowerPhysics:
         for obj in objects:
             if not obj in self.world.keys():
                 raise ValueError('Block {} not found'.format(obj))
-
         object_ids = [self.world[obj] for obj in objects]
 
         p = self.client
-        p.setGravity(0,0,-10)
         p.setPhysicsEngineParameter(
+            # useSplitImpulse = 1,
+            # splitImpulsePenetrationThreshold = 0.9
             fixedTimeStep = 1.0 / time_step,
-            numSolverIterations = 100,
+            # numSolverIterations = 100,
             enableConeFriction = 0,
+            # contactERP = 0.2
+
         )
+        p.setGravity(0, 0, -10)
 
         positions = np.zeros((frames, len(objects), 3))
         rotations = np.zeros((frames, len(objects), 4))
@@ -124,6 +116,7 @@ class TowerPhysics:
 
             if step % steps_per_frame != 0:
                 continue
+
             for c, obj_id in enumerate(object_ids):
                 pos, rot = p.getBasePositionAndOrientation(obj_id)
                 frame = np.floor(step / steps_per_frame).astype(int)

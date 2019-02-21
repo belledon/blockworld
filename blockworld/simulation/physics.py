@@ -108,11 +108,9 @@ def shift(tower, std):
     """
     deltas = np.zeros((len(tower), 3))
     deltas[:, 0:2] = np.random.normal(scale = std, size = (len(tower), 2))
-    tower_d = tower.serialize()
-    for block_i in range(len(tower)):
-        block = tower.blocks[block_i + 1]['block']
-        new_pos = block.pos + deltas[block_i]
-        tower_d[block_i + 1]['data']['pos'] = new_pos
+    d = tower.serialize()
+    for block, delta in zip(d[1:], deltas):
+        block['data']['pos'] += delta
 
-    new_tower = towers.simple_tower.load(tower_d)
+    new_tower = towers.simple_tower.load(d)
     return new_tower
