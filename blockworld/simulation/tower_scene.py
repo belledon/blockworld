@@ -31,15 +31,15 @@ class Loader:
         p.changeDynamics(obj_id, -1, lateralFriction = friction)
         return obj_id
 
-default_loader = Loader()
-
 class TowerPhysics:
 
     """
     Handles physics for block towers.
     """
 
-    def __init__(self, tower_json, loader = default_loader):
+    def __init__(self, tower_json, loader = None):
+        if loader is None:
+            loader = Loader()
         self.loader = loader
         self.client = bc.BulletClient(connection_mode=pybullet.DIRECT)
         self.world = tower_json
