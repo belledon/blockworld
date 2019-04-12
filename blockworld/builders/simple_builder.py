@@ -129,7 +129,6 @@ class SimpleBuilder(Builder):
             if t_tower.height >= self.max_height:
                 break
 
-            print('BLOCK', ib)
             valids = list(self.find_placements(t_tower, block))
             if len(valids) == 0:
                 print('Could not place any more blocks')
